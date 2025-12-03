@@ -1,0 +1,495 @@
+
+import React, { useState, useMemo } from 'react';
+import { Search, Filter, Plus, ChevronDown, LayoutList, MoreHorizontal, User, Calendar, Tag, MessageSquare, Paperclip, CheckSquare, Clock, AlertCircle, X, ChevronRight, Edit3 } from 'lucide-react';
+import Modal from '../components/Modal';
+
+interface RequirementsProps {
+  viewType: 'requirements' | 'tasks' | 'defects';
+}
+
+const Requirements: React.FC<RequirementsProps> = ({ viewType }) => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const items = [
+    { id: 'ICQMBW', title: '【示例缺陷】手机号注册页面样式异常', type: 'Defect', priority: 'High', status: 'Fixing', author: 'looking4id', created: '8月2日 20:23', due: '08-16~08-30 逾期92天', desc: '在某些低分辨率手机上，注册页面的输入框对齐有问题，且验证码按钮显示不全。' },
+    { id: 'ICQMBV', title: '【示例缺陷】多人在点餐页面卡顿', type: 'Defect', priority: 'High', status: 'Fixing', author: 'looking4id', created: '8月2日 20:23', due: '08-02~08-16 逾期106天', desc: '并发用户超过50人时，点餐页面加载延迟超过3秒，购物车同步有明显延迟。' },
+    { id: 'ICQMBP', title: '【示例需求】支持微信小程序在线点餐', type: 'Req', priority: 'High', status: 'InProgress', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '用户可以通过微信小程序扫描桌码进行点餐，支持多人同时点餐，购物车实时同步。' },
+    { id: 'ICQMBU', title: '【示例缺陷】多语言切换失效', type: 'Defect', priority: 'Medium', status: 'Verified', author: 'looking4id', created: '8月2日 20:23', due: '08-02~08-16 逾期106天', desc: '切换到英文模式后，部分菜单项仍然显示为中文。' },
+    { id: 'ICQMC7', title: '【示例需求】支持多语言切换', type: 'Req', priority: 'Medium', status: 'ToDo', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '系统需支持中文、英文、日文三种语言切换，后台可配置语言包。' },
+    // Tasks
+    { id: 'ICQMC8', title: '【示例任务】多人点餐 PRD 编写', type: 'Task', priority: 'High', status: 'Done', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '完成多人点餐功能的详细需求文档编写，包括流程图和交互原型。' },
+    { id: 'ICQMC9', title: '【示例任务】前端页面切图', type: 'Task', priority: 'Medium', status: 'InProgress', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '根据UI设计稿完成点餐页面的HTML/CSS切图。' },
+    { id: 'ICQMCB', title: '【示例任务】后端接口设计', type: 'Task', priority: 'High', status: 'ToDo', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '设计并输出多人点餐功能的后端API接口文档。' },
+  ];
+
+  const config = useMemo(() => {
+    switch (viewType) {
+      case 'defects':
+        return {
+          title: '缺陷',
+          createBtn: '新建缺陷',
+          filterType: 'Defect'
+        };
+      case 'tasks':
+        return {
+          title: '任务',
+          createBtn: '新建任务',
+          filterType: 'Task'
+        };
+      case 'requirements':
+      default:
+        return {
+          title: '需求',
+          createBtn: '新建需求',
+          filterType: 'Req'
+        };
+    }
+  }, [viewType]);
+
+  const filteredItems = items.filter(item => item.type === config.filterType);
+
+  const openDetail = (item: any) => {
+    setSelectedItem(item);
+    setIsDetailModalOpen(true);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-white">
+       {/* Header */}
+       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+           <div className="flex items-center gap-2">
+               <h1 className="text-xl font-bold text-gray-900">{config.title}</h1>
+           </div>
+           <div className="flex gap-2">
+               <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-pink-700 text-white px-4 py-2 rounded shadow hover:bg-pink-800 flex items-center text-sm transition-colors"
+               >
+                  <Plus className="w-4 h-4 mr-2" /> {config.createBtn}
+               </button>
+               <button className="p-2 border border-gray-300 rounded text-gray-500 hover:bg-gray-50"><MoreHorizontal className="w-4 h-4" /></button>
+           </div>
+       </div>
+
+       {/* Toolbar */}
+       <div className="p-4 flex items-center justify-between bg-gray-50 border-b border-gray-200">
+           <div className="flex items-center gap-3">
+               <span className="text-sm text-gray-500">共 {filteredItems.length} 项</span>
+               <div className="relative">
+                    <input type="text" placeholder="输入关键词" className="pl-3 pr-8 py-1.5 border border-gray-300 rounded text-sm w-48 focus:ring-1 focus:ring-blue-500 outline-none" />
+                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+               </div>
+               <div className="flex gap-2">
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                       负责人 <ChevronDown className="w-3 h-3 ml-1" />
+                   </button>
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                       优先级 <ChevronDown className="w-3 h-3 ml-1" />
+                   </button>
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                       状态 <ChevronDown className="w-3 h-3 ml-1" />
+                   </button>
+               </div>
+           </div>
+           <div className="flex items-center gap-3 text-sm text-gray-600">
+               <button className="flex items-center hover:text-gray-900"><Filter className="w-4 h-4 mr-1" /> 筛选</button>
+               <button className="flex items-center hover:text-gray-900"><LayoutList className="w-4 h-4 mr-1" /> 表格</button>
+           </div>
+       </div>
+
+       {/* Table */}
+       <div className="flex-1 overflow-auto">
+           <table className="w-full text-left text-sm">
+               <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200 sticky top-0">
+                   <tr>
+                       <th className="px-4 py-3 w-8"><input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" /></th>
+                       <th className="px-4 py-3 w-24">ID</th>
+                       <th className="px-4 py-3">标题</th>
+                       <th className="px-4 py-3 w-20">优先级</th>
+                       <th className="px-4 py-3 w-24">标签</th>
+                       <th className="px-4 py-3 w-24">状态</th>
+                       <th className="px-4 py-3 w-32">创建时间</th>
+                       <th className="px-4 py-3 w-24">负责人</th>
+                       <th className="px-4 py-3 w-20">类型</th>
+                       <th className="px-4 py-3 w-48">计划时间</th>
+                   </tr>
+               </thead>
+               <tbody className="divide-y divide-gray-100">
+                   {filteredItems.length > 0 ? (
+                       filteredItems.map(item => (
+                           <tr 
+                              key={item.id} 
+                              onClick={() => openDetail(item)}
+                              className="hover:bg-gray-50 group transition-colors cursor-pointer"
+                           >
+                               <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                               </td>
+                               <td className="px-4 py-3 text-gray-500 font-mono text-xs"><span className="bg-gray-100 rounded px-1.5 py-0.5">{item.id}</span></td>
+                               <td className="px-4 py-3">
+                                   <div className="flex items-center gap-2">
+                                       {item.type === 'Defect' ? (
+                                           <span className="bg-red-500 text-white p-0.5 rounded text-[10px] shrink-0">Bug</span>
+                                       ) : item.type === 'Task' ? (
+                                           <span className="bg-blue-400 text-white p-0.5 rounded text-[10px] shrink-0">Task</span>
+                                       ) : (
+                                           <span className="bg-blue-600 text-white p-0.5 rounded text-[10px] shrink-0">Req</span>
+                                       )}
+                                       <span className="text-gray-900 font-medium hover:text-pink-600">{item.title}</span>
+                                   </div>
+                               </td>
+                               <td className="px-4 py-3">
+                                   <span className={`border px-1.5 py-0.5 rounded text-xs ${item.priority === 'High' ? 'text-red-600 border-red-200 bg-red-50' : 'text-yellow-600 border-yellow-200 bg-yellow-50'}`}>
+                                       {item.priority === 'High' ? '紧急' : '高'}
+                                   </span>
+                               </td>
+                               <td className="px-4 py-3">
+                                   <span className="bg-blue-50 text-blue-700 text-xs px-1.5 py-0.5 rounded border border-blue-100">新手引导</span>
+                               </td>
+                               <td className="px-4 py-3">
+                                   <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded w-fit">
+                                       <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Verified' || item.status === 'Done' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                                       {item.status === 'Fixing' ? '修复中' : item.status === 'Verified' ? '已修复' : item.status === 'Done' ? '已完成' : '进行中'}
+                                   </div>
+                               </td>
+                               <td className="px-4 py-3 text-gray-500 text-xs">{item.created}</td>
+                               <td className="px-4 py-3">
+                                   <div className="flex items-center gap-1">
+                                       <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
+                                       <span className="text-gray-600 text-xs">{item.author}</span>
+                                   </div>
+                               </td>
+                               <td className="px-4 py-3 text-gray-600 text-xs">
+                                   {item.type === 'Defect' ? '缺陷' : item.type === 'Task' ? '任务' : '需求'}
+                               </td>
+                               <td className="px-4 py-3 text-red-500 text-xs">{item.due}</td>
+                           </tr>
+                       ))
+                   ) : (
+                       <tr>
+                           <td colSpan={10} className="px-4 py-12 text-center text-gray-400">
+                               暂无数据
+                           </td>
+                       </tr>
+                   )}
+               </tbody>
+           </table>
+       </div>
+
+       {/* Create Modal - Context Aware */}
+       <Modal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title={config.createBtn}
+          size="lg"
+          footer={
+             <>
+                <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
+                <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800 shadow-sm">创建</button>
+             </>
+          }
+       >
+          <div className="space-y-4">
+             {/* Common Title */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">标题 <span className="text-red-500">*</span></label>
+                <input type="text" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none" placeholder={`输入${config.title}标题`} autoFocus />
+             </div>
+
+             {/* Dynamic Form Content */}
+             {viewType === 'requirements' && (
+                 <>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option>High (高)</option>
+                                <option>Medium (中)</option>
+                                <option>Low (低)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">需求类型</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option>功能特性 (Feature)</option>
+                                <option>非功能需求 (NFR)</option>
+                                <option>用户体验 (UX)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-1">计划开始</label>
+                             <input type="date" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none" />
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-1">计划完成</label>
+                             <input type="date" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none" />
+                         </div>
+                    </div>
+                 </>
+             )}
+
+             {viewType === 'tasks' && (
+                 <>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option>High (高)</option>
+                                <option>Medium (中)</option>
+                                <option>Low (低)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">任务类型</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option>开发任务</option>
+                                <option>测试任务</option>
+                                <option>设计任务</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">指派给</label>
+                            <div className="flex items-center border border-gray-300 rounded px-3 py-2 bg-white">
+                                <User className="w-4 h-4 text-gray-400 mr-2" />
+                                <input type="text" placeholder="搜索成员" className="flex-1 text-sm outline-none" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">预计工时</label>
+                            <div className="flex items-center border border-gray-300 rounded px-3 py-2 bg-white">
+                                <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                                <input type="number" placeholder="小时" className="flex-1 text-sm outline-none" />
+                            </div>
+                        </div>
+                    </div>
+                 </>
+             )}
+
+             {viewType === 'defects' && (
+                 <>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">严重程度</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option className="text-red-600">Critical (致命)</option>
+                                <option className="text-orange-500">Major (严重)</option>
+                                <option>Minor (一般)</option>
+                                <option>Trivial (轻微)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                <option>High (高)</option>
+                                <option>Medium (中)</option>
+                                <option>Low (低)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-1">发现版本</label>
+                             <input type="text" placeholder="例如: v1.2.0" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none" />
+                         </div>
+                         <div>
+                             <label className="block text-sm font-medium text-gray-700 mb-1">环境</label>
+                             <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-pink-500 outline-none">
+                                 <option>生产环境 (Prod)</option>
+                                 <option>预发布环境 (UAT)</option>
+                                 <option>测试环境 (Test)</option>
+                             </select>
+                         </div>
+                    </div>
+                 </>
+             )}
+
+             {/* Common Description */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {viewType === 'defects' ? '缺陷描述 / 复现步骤' : '详细描述'}
+                </label>
+                <textarea 
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-32 resize-none focus:ring-2 focus:ring-pink-500 outline-none" 
+                    placeholder={viewType === 'defects' ? '1. 打开页面...\n2. 点击按钮...\n3. 报错信息...' : '输入详细信息...'}
+                ></textarea>
+             </div>
+             
+             {/* Common Attachments */}
+             <div className="border border-dashed border-gray-300 rounded px-4 py-3 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                  <Paperclip className="w-5 h-5 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-500">拖拽文件到此处或点击上传附件</span>
+             </div>
+          </div>
+       </Modal>
+
+       {/* Detail Modal */}
+       {selectedItem && (
+          <Modal
+             isOpen={isDetailModalOpen}
+             onClose={() => setIsDetailModalOpen(false)}
+             title={`${selectedItem.id} ${selectedItem.type === 'Defect' ? '缺陷详情' : selectedItem.type === 'Task' ? '任务详情' : '需求详情'}`}
+             size="2xl"
+          >
+             <div className="flex flex-col h-[70vh]">
+                 <div className="flex flex-1 overflow-hidden">
+                    {/* Main Content */}
+                    <div className="flex-1 pr-6 overflow-y-auto custom-scrollbar">
+                         <div className="flex items-start gap-2 mb-4">
+                              {selectedItem.type === 'Defect' ? (
+                                  <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-xs mt-1 shrink-0">Bug</span>
+                              ) : selectedItem.type === 'Task' ? (
+                                  <span className="bg-blue-400 text-white px-1.5 py-0.5 rounded text-xs mt-1 shrink-0">Task</span>
+                              ) : (
+                                  <span className="bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs mt-1 shrink-0">Req</span>
+                              )}
+                              <h2 className="text-xl font-bold text-gray-900 leading-snug">{selectedItem.title}</h2>
+                         </div>
+
+                         <div className="flex items-center gap-3 mb-6">
+                            <button className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700">
+                                <Edit3 className="w-3 h-3" /> 编辑
+                            </button>
+                            <button className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700">
+                                <Paperclip className="w-3 h-3" /> 附件
+                            </button>
+                            <button className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700">
+                                <MoreHorizontal className="w-3 h-3" /> 更多
+                            </button>
+                         </div>
+
+                         <div className="space-y-6">
+                             <section>
+                                 <h3 className="text-sm font-bold text-gray-900 mb-2">描述</h3>
+                                 <div className="text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 rounded border border-gray-100 min-h-[100px]">
+                                     {selectedItem.desc}
+                                 </div>
+                             </section>
+
+                             <section>
+                                 <div className="border-b border-gray-200 mb-4">
+                                     <div className="flex gap-6">
+                                         <button className="text-sm font-medium text-pink-600 border-b-2 border-pink-600 pb-2">活动</button>
+                                         <button className="text-sm font-medium text-gray-500 hover:text-gray-800 pb-2">评论</button>
+                                         <button className="text-sm font-medium text-gray-500 hover:text-gray-800 pb-2">关联</button>
+                                         <button className="text-sm font-medium text-gray-500 hover:text-gray-800 pb-2">工时</button>
+                                     </div>
+                                 </div>
+                                 
+                                 <div className="space-y-4">
+                                     <div className="flex gap-3">
+                                         <div className="w-8 h-8 bg-amber-500 rounded-full text-white text-xs flex items-center justify-center shrink-0">Lo</div>
+                                         <div className="flex-1">
+                                             <div className="bg-gray-50 rounded px-3 py-2 text-sm text-gray-700">
+                                                 <span className="font-bold text-gray-900 mr-2">looking4id</span>
+                                                 <span>创建了工作项</span>
+                                             </div>
+                                             <div className="text-xs text-gray-400 mt-1">{selectedItem.created}</div>
+                                         </div>
+                                     </div>
+                                     
+                                     {selectedItem.status === 'Verified' && (
+                                         <div className="flex gap-3">
+                                             <div className="w-8 h-8 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center shrink-0">QA</div>
+                                             <div className="flex-1">
+                                                 <div className="bg-gray-50 rounded px-3 py-2 text-sm text-gray-700">
+                                                     <span className="font-bold text-gray-900 mr-2">TestUser</span>
+                                                     <span>将状态更新为 <span className="text-green-600 font-medium">已修复</span></span>
+                                                 </div>
+                                                 <div className="text-xs text-gray-400 mt-1">10分钟前</div>
+                                             </div>
+                                         </div>
+                                     )}
+                                 </div>
+                             </section>
+                         </div>
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="w-72 border-l border-gray-200 pl-6 space-y-6 overflow-y-auto custom-scrollbar">
+                         <div>
+                             <label className="block text-xs font-medium text-gray-500 mb-1">状态</label>
+                             <div className="relative">
+                                 <select 
+                                    className="w-full appearance-none bg-white border border-gray-300 hover:border-gray-400 px-3 py-1.5 rounded text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                    defaultValue={selectedItem.status}
+                                 >
+                                     <option value="ToDo">待处理</option>
+                                     <option value="InProgress">进行中</option>
+                                     <option value="Fixing">修复中</option>
+                                     <option value="Verified">已修复</option>
+                                     <option value="Done">已完成</option>
+                                 </select>
+                                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                             </div>
+                         </div>
+
+                         <div>
+                             <label className="block text-xs font-medium text-gray-500 mb-1">负责人</label>
+                             <div className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded cursor-pointer border border-transparent hover:border-gray-200">
+                                 <div className="w-6 h-6 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
+                                 <span className="text-sm text-gray-700">{selectedItem.author}</span>
+                             </div>
+                         </div>
+
+                         <div>
+                             <label className="block text-xs font-medium text-gray-500 mb-1">优先级</label>
+                             <div className="flex items-center gap-2">
+                                 {selectedItem.priority === 'High' ? (
+                                     <span className="text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded text-xs flex items-center gap-1 w-fit">
+                                         <AlertCircle className="w-3 h-3" /> 紧急
+                                     </span>
+                                 ) : (
+                                     <span className="text-yellow-600 bg-yellow-50 border border-yellow-100 px-2 py-0.5 rounded text-xs flex items-center gap-1 w-fit">
+                                         <AlertCircle className="w-3 h-3" /> 高
+                                     </span>
+                                 )}
+                             </div>
+                         </div>
+
+                         <div className="space-y-3 pt-3 border-t border-gray-100">
+                             <div>
+                                 <div className="flex items-center gap-2 text-gray-500 mb-1">
+                                     <Calendar className="w-3.5 h-3.5" />
+                                     <span className="text-xs">计划开始</span>
+                                 </div>
+                                 <div className="text-sm text-gray-800 pl-6">2025-08-16</div>
+                             </div>
+                             <div>
+                                 <div className="flex items-center gap-2 text-gray-500 mb-1">
+                                     <Calendar className="w-3.5 h-3.5" />
+                                     <span className="text-xs">计划截止</span>
+                                 </div>
+                                 <div className="text-sm text-gray-800 pl-6">2025-08-30</div>
+                             </div>
+                         </div>
+
+                         <div className="pt-3 border-t border-gray-100">
+                             <label className="block text-xs font-medium text-gray-500 mb-2">所属迭代</label>
+                             <div className="text-sm text-blue-600 hover:underline cursor-pointer">Sprint1: 功能优化</div>
+                         </div>
+
+                         <div className="pt-3 border-t border-gray-100">
+                             <label className="block text-xs font-medium text-gray-500 mb-2">标签</label>
+                             <div className="flex flex-wrap gap-2">
+                                 <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">新手引导</span>
+                                 <span className="border border-dashed border-gray-300 text-gray-400 px-2 py-0.5 rounded-full text-xs hover:border-gray-400 cursor-pointer flex items-center">
+                                     <Plus className="w-3 h-3 mr-1" /> 添加
+                                 </span>
+                             </div>
+                         </div>
+                    </div>
+                 </div>
+             </div>
+          </Modal>
+       )}
+    </div>
+  );
+};
+
+export default Requirements;
