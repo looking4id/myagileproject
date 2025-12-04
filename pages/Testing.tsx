@@ -1,25 +1,45 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   FlaskConical, ClipboardCheck, FileSpreadsheet, PieChart, 
   Plus, Search, Filter, MoreHorizontal, ChevronDown, 
-  ChevronRight, Play, CheckCircle2, AlertCircle, Clock,
-  FolderOpen, LayoutList, GitBranch, Settings, Edit2, Trash2,
-  User, Calendar, Flag, CheckCircle, XCircle, FileText
+  Settings, AlertCircle, Clock,
+  Calendar, Trash2, Edit2, CheckCircle2, PlayCircle, XCircle,
+  User
 } from 'lucide-react';
 import Modal from '../components/Modal';
 
 type TestModule = 'cases' | 'reviews' | 'plans' | 'reports';
 
+interface TestPlan {
+  id: string;
+  title: string;
+  status: '未开始' | '进行中' | '已完成' | '阻塞';
+  owner: string;
+  passed: number;
+  total: number;
+  percent: number;
+  startDate: string;
+  endDate: string;
+}
+
 const Testing: React.FC = () => {
   const [activeModule, setActiveModule] = useState<TestModule>('cases');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Detail Modal States
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
   const [isTestCaseDetailOpen, setIsTestCaseDetailOpen] = useState(false);
+  
   const [selectedTestReview, setSelectedTestReview] = useState<any>(null);
   const [isTestReviewDetailOpen, setIsTestReviewDetailOpen] = useState(false);
+
+  const [selectedTestPlan, setSelectedTestPlan] = useState<TestPlan | null>(null);
+  const [isTestPlanDetailOpen, setIsTestPlanDetailOpen] = useState(false);
+
+  // Form State for Create/Edit
+  const [formData, setFormData] = useState<any>({});
 
   // Column Width State
   const [columnWidths, setColumnWidths] = useState<any>({
@@ -42,8 +62,8 @@ const Testing: React.FC = () => {
       time: 250,
     },
     plans: {
+       status: 100,
        title: 400,
-       status: 120,
        owner: 140,
        progress: 200,
        time: 250
@@ -112,14 +132,15 @@ const Testing: React.FC = () => {
       { id: 'TR001', title: '【示例数据】商城系统-注册与登录', status: '进行中', owner: 'looking4id', reviewed: 2, total: 6, startTime: '2025-12-01', endTime: '2025-12-14' }
   ];
 
-  const testPlans = [
-      { id: 'TP001', title: '测试计划01', status: '未开始', owner: 'looking4id', passed: 0, total: 2, percent: 0, time: '2025-11-30 ~ 2025-12-30' }
-  ];
+  const [testPlans, setTestPlans] = useState<TestPlan[]>([
+      { id: 'TP001', title: '测试计划01', status: '未开始', owner: 'looking4id', passed: 0, total: 2, percent: 0, startDate: '2025-11-30', endDate: '2025-12-30' }
+  ]);
 
   const testReports = [
       { id: 'RPT001', title: '测试计划01测试报告', plan: '测试计划01', creator: 'looking4id', createTime: '2025-11-30 11:04' }
   ];
 
+  // Logic Handlers
   const handleCaseClick = (item: any) => {
       setSelectedTestCase(item);
       setIsTestCaseDetailOpen(true);
@@ -130,6 +151,49 @@ const Testing: React.FC = () => {
       setIsTestReviewDetailOpen(true);
   };
 
+  const handlePlanClick = (item: TestPlan) => {
+      setSelectedTestPlan(item);
+      setFormData({ ...item }); // Pre-fill form
+      setIsTestPlanDetailOpen(true);
+  };
+
+  const handleCreate = () => {
+      if (activeModule === 'plans') {
+          const newPlan: TestPlan = {
+              id: `TP${Date.now().toString().slice(-4)}`,
+              title: formData.title || '新测试计划',
+              status: '未开始',
+              owner: formData.owner || 'looking4id',
+              passed: 0,
+              total: 0,
+              percent: 0,
+              startDate: formData.startDate || new Date().toISOString().split('T')[0],
+              endDate: formData.endDate || new Date().toISOString().split('T')[0]
+          };
+          setTestPlans([newPlan, ...testPlans]);
+          setShowCreateModal(false);
+          setFormData({});
+      } else {
+          // Placeholder for other modules
+          setShowCreateModal(false);
+      }
+  };
+
+  const handleUpdatePlan = () => {
+      if (!selectedTestPlan) return;
+      setTestPlans(prev => prev.map(p => p.id === selectedTestPlan.id ? { ...p, ...formData } : p));
+      setIsTestPlanDetailOpen(false);
+      setFormData({});
+  };
+
+  const handleDeletePlan = () => {
+      if (!selectedTestPlan) return;
+      if (window.confirm('确定要删除该测试计划吗？')) {
+          setTestPlans(prev => prev.filter(p => p.id !== selectedTestPlan.id));
+          setIsTestPlanDetailOpen(false);
+      }
+  };
+
   // Render Helpers
   const Resizer = ({ module, col }: { module: TestModule, col: string }) => (
       <div 
@@ -137,6 +201,16 @@ const Testing: React.FC = () => {
         onMouseDown={(e) => startResize(e, module, col)}
       />
   );
+
+  const getFilteredItems = () => {
+      const lowerQuery = searchQuery.toLowerCase();
+      if (activeModule === 'cases') return testCases.filter(i => i.title.toLowerCase().includes(lowerQuery));
+      if (activeModule === 'reviews') return testReviews.filter(i => i.title.toLowerCase().includes(lowerQuery));
+      if (activeModule === 'plans') return testPlans.filter(i => i.title.toLowerCase().includes(lowerQuery));
+      return testReports.filter(i => i.title.toLowerCase().includes(lowerQuery));
+  };
+
+  const filteredItems = getFilteredItems();
 
   return (
     <div className="flex h-full bg-white">
@@ -187,7 +261,10 @@ const Testing: React.FC = () => {
                   </h1>
                   <div className="flex gap-2">
                      <button 
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => {
+                            setFormData({});
+                            setShowCreateModal(true);
+                        }}
                         className="bg-pink-700 text-white px-4 py-2 rounded text-sm hover:bg-pink-800 flex items-center shadow-sm"
                      >
                         <Plus className="w-4 h-4 mr-2" /> 
@@ -211,13 +288,15 @@ const Testing: React.FC = () => {
               {/* Filter Bar */}
               <div className="mt-4 flex items-center justify-between gap-4 bg-gray-50 p-2 rounded border border-gray-100">
                    <div className="flex items-center gap-3">
-                       <span className="text-sm text-gray-500">共有 {
-                           activeModule === 'cases' ? testCases.length :
-                           activeModule === 'reviews' ? testReviews.length :
-                           activeModule === 'plans' ? testPlans.length : testReports.length
-                       } 项</span>
+                       <span className="text-sm text-gray-500">共有 {filteredItems.length} 项</span>
                        <div className="relative">
-                           <input type="text" placeholder="搜索..." className="pl-8 pr-4 py-1.5 border border-gray-300 rounded text-sm w-64 focus:ring-1 focus:ring-pink-500 outline-none" />
+                           <input 
+                               type="text" 
+                               placeholder="搜索..." 
+                               value={searchQuery}
+                               onChange={(e) => setSearchQuery(e.target.value)}
+                               className="pl-8 pr-4 py-1.5 border border-gray-300 rounded text-sm w-64 focus:ring-1 focus:ring-pink-500 outline-none" 
+                           />
                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                        </div>
                    </div>
@@ -232,7 +311,7 @@ const Testing: React.FC = () => {
           <div className="flex-1 overflow-auto bg-white p-6">
               <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                   <table className="w-full text-left text-sm table-fixed">
-                      <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                      <thead className="bg-gray-50 text-gray-500 border-b border-gray-200 sticky top-0 z-10">
                           {activeModule === 'cases' && (
                               <tr>
                                   <th className="px-4 py-3 font-medium relative group" style={{ width: columnWidths.cases.id }}>
@@ -302,7 +381,7 @@ const Testing: React.FC = () => {
                           )}
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                          {activeModule === 'cases' && testCases.map(item => (
+                          {activeModule === 'cases' && (filteredItems as typeof testCases).map(item => (
                               <tr 
                                 key={item.id} 
                                 onClick={() => handleCaseClick(item)}
@@ -325,7 +404,7 @@ const Testing: React.FC = () => {
                               </tr>
                           ))}
 
-                          {activeModule === 'reviews' && testReviews.map(item => {
+                          {activeModule === 'reviews' && (filteredItems as typeof testReviews).map(item => {
                               const progressPercent = Math.round((item.reviewed / item.total) * 100) || 0;
                               return (
                                   <tr 
@@ -366,20 +445,39 @@ const Testing: React.FC = () => {
                               );
                           })}
 
-                          {activeModule === 'plans' && testPlans.map(item => (
-                              <tr key={item.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
-                                  <td className="px-4 py-3"><span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs border border-gray-200 flex items-center w-fit gap-1"><span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>{item.status}</span></td>
-                                  <td className="px-4 py-3 font-medium text-gray-900 truncate">{item.title}</td>
+                          {activeModule === 'plans' && (filteredItems as typeof testPlans).map(item => (
+                              <tr key={item.id} onClick={() => handlePlanClick(item)} className="hover:bg-gray-50 cursor-pointer transition-colors group">
+                                  <td className="px-4 py-3">
+                                      <span className={`px-2 py-0.5 rounded text-xs border flex items-center w-fit gap-1 ${
+                                          item.status === '已完成' ? 'bg-green-50 text-green-700 border-green-200' :
+                                          item.status === '进行中' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                          'bg-gray-100 text-gray-500 border-gray-200'
+                                      }`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${
+                                              item.status === '已完成' ? 'bg-green-500' : 
+                                              item.status === '进行中' ? 'bg-blue-500' : 'bg-gray-400'
+                                          }`}></span>
+                                          {item.status}
+                                      </span>
+                                  </td>
+                                  <td className="px-4 py-3 font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">{item.title}</td>
                                   <td className="px-4 py-3 flex items-center gap-2">
                                       <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
                                       {item.owner}
                                   </td>
-                                  <td className="px-4 py-3 text-gray-600">{item.passed} / {item.total} <span className="text-gray-400 text-xs">({item.percent}%)</span></td>
-                                  <td className="px-4 py-3 text-xs text-gray-500">{item.time}</td>
+                                  <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2 w-32">
+                                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                              <div className="h-full bg-green-500" style={{ width: `${item.percent}%` }}></div>
+                                          </div>
+                                          <span className="text-xs text-gray-500">{item.percent}%</span>
+                                      </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-gray-500">{item.startDate} ~ {item.endDate}</td>
                               </tr>
                           ))}
 
-                          {activeModule === 'reports' && testReports.map(item => (
+                          {activeModule === 'reports' && (filteredItems as typeof testReports).map(item => (
                               <tr key={item.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
                                   <td className="px-4 py-3 font-medium text-gray-900 truncate">{item.title}</td>
                                   <td className="px-4 py-3 flex items-center gap-2">
@@ -410,15 +508,23 @@ const Testing: React.FC = () => {
         footer={
             <>
                <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
-               <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800">确定</button>
+               <button onClick={handleCreate} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800">确定</button>
             </>
         }
       >
          <div className="space-y-4">
              <div>
                  <label className="block text-sm font-medium text-gray-700 mb-1">标题 <span className="text-red-500">*</span></label>
-                 <input type="text" className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none" placeholder="请输入标题" autoFocus />
+                 <input 
+                    type="text" 
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none" 
+                    placeholder="请输入标题" 
+                    autoFocus
+                    value={formData.title || ''}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                 />
              </div>
+             
              {activeModule === 'cases' && (
                  <>
                     <div className="grid grid-cols-2 gap-4">
@@ -437,7 +543,53 @@ const Testing: React.FC = () => {
                     </div>
                  </>
              )}
-             {/* Add other specific fields for Reviews, Plans, etc. here if needed */}
+
+             {activeModule === 'plans' && (
+                 <>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">负责人</label>
+                            <select 
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none"
+                                value={formData.owner || 'looking4id'}
+                                onChange={(e) => setFormData({...formData, owner: e.target.value})}
+                            >
+                                <option>looking4id</option>
+                                <option>dev01</option>
+                                <option>qa01</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">关联迭代</label>
+                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none">
+                                <option>Sprint 1: 功能优化</option>
+                                <option>Sprint 2: 自助开票功能开发</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">计划开始</label>
+                            <input 
+                                type="date" 
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none"
+                                value={formData.startDate || ''}
+                                onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">计划结束</label>
+                            <input 
+                                type="date" 
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none"
+                                value={formData.endDate || ''}
+                                onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                 </>
+             )}
+
              <div>
                  <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
                  <textarea className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-32 resize-none" placeholder="输入描述..."></textarea>
@@ -457,13 +609,11 @@ const Testing: React.FC = () => {
                 <div className="flex-1 flex overflow-hidden">
                     <div className="flex-1 pr-6 overflow-y-auto custom-scrollbar">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">{selectedTestCase.title}</h2>
-                        
                         <div className="space-y-6">
                             <div className="bg-gray-50 p-4 rounded border border-gray-100">
                                 <h3 className="text-sm font-bold text-gray-800 mb-2">前置条件</h3>
                                 <p className="text-sm text-gray-600">用户已注册且账号状态正常。</p>
                             </div>
-
                             <div>
                                 <h3 className="text-sm font-bold text-gray-800 mb-2">测试步骤</h3>
                                 <table className="w-full text-sm text-left border border-gray-200 rounded">
@@ -571,6 +721,109 @@ const Testing: React.FC = () => {
                  </div>
              </div>
         </Modal>
+      )}
+
+      {/* Test Plan Edit/Detail Modal */}
+      {selectedTestPlan && (
+          <Modal
+             isOpen={isTestPlanDetailOpen}
+             onClose={() => setIsTestPlanDetailOpen(false)}
+             title={`编辑测试计划: ${selectedTestPlan.id}`}
+             size="lg"
+             footer={
+                 <>
+                    <button 
+                       onClick={handleDeletePlan} 
+                       className="px-4 py-2 border border-red-200 text-red-600 rounded text-sm hover:bg-red-50 mr-auto flex items-center"
+                    >
+                        <Trash2 className="w-4 h-4 mr-2" /> 删除计划
+                    </button>
+                    <button onClick={() => setIsTestPlanDetailOpen(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
+                    <button onClick={handleUpdatePlan} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800 shadow-sm">保存更改</button>
+                 </>
+             }
+          >
+             <div className="space-y-6">
+                 <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">标题</label>
+                     <input 
+                        type="text" 
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none"
+                        value={formData.title || ''}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                     />
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-6">
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                         <select 
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none"
+                            value={formData.status || '未开始'}
+                            onChange={(e) => setFormData({...formData, status: e.target.value})}
+                         >
+                             <option>未开始</option>
+                             <option>进行中</option>
+                             <option>已完成</option>
+                             <option>阻塞</option>
+                         </select>
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">负责人</label>
+                         <select 
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none"
+                            value={formData.owner || ''}
+                            onChange={(e) => setFormData({...formData, owner: e.target.value})}
+                         >
+                             <option>looking4id</option>
+                             <option>dev01</option>
+                             <option>qa01</option>
+                         </select>
+                     </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-6">
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">计划开始</label>
+                         <input 
+                            type="date" 
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none"
+                            value={formData.startDate || ''}
+                            onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">计划结束</label>
+                         <input 
+                            type="date" 
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-pink-500 outline-none"
+                            value={formData.endDate || ''}
+                            onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                         />
+                     </div>
+                 </div>
+
+                 <div>
+                     <h4 className="text-sm font-medium text-gray-700 mb-2">执行概览</h4>
+                     <div className="bg-gray-50 rounded p-4 border border-gray-200 flex items-center justify-between">
+                         <div className="text-center">
+                             <div className="text-xs text-gray-500 mb-1">总用例</div>
+                             <div className="text-lg font-bold">{formData.total || 0}</div>
+                         </div>
+                         <div className="h-8 w-px bg-gray-200"></div>
+                         <div className="text-center">
+                             <div className="text-xs text-gray-500 mb-1">通过</div>
+                             <div className="text-lg font-bold text-green-600">{formData.passed || 0}</div>
+                         </div>
+                         <div className="h-8 w-px bg-gray-200"></div>
+                         <div className="text-center">
+                             <div className="text-xs text-gray-500 mb-1">进度</div>
+                             <div className="text-lg font-bold text-blue-600">{formData.percent || 0}%</div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+          </Modal>
       )}
     </div>
   );
