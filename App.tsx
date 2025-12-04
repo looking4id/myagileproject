@@ -10,6 +10,7 @@ import Iterations from './pages/Iterations';
 import Requirements from './pages/Requirements';
 import Testing from './pages/Testing';
 import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
 import { ViewState } from './types';
 
 function App() {
@@ -37,9 +38,11 @@ function App() {
         return <Requirements viewType="defects" />;
       case 'testing':
         return <Testing />;
+      case 'settings':
+        return <Settings />;
       default:
         // Default fallbacks for unimplemented pages in this demo
-        if (['metrics', 'members', 'settings'].includes(currentView)) {
+        if (['metrics', 'members'].includes(currentView)) {
              return <div className="p-10 text-center text-gray-500">该模块正在开发中...</div>;
         }
         return <Planning />;
