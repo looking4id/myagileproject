@@ -1,17 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area, Legend
 } from 'recharts';
 import { 
-  MoreHorizontal, ChevronRight, Layers, Box, FileText, 
-  CheckSquare, AlertCircle, Clock, Calendar, Zap, 
-  ArrowUpRight, User, Activity
+  MoreHorizontal, Layers, Box, FileText, 
+  CheckSquare, AlertCircle, Zap, 
+  ArrowUpRight, User, Move, GripVertical
 } from 'lucide-react';
+import { Responsive, WidthProvider } from 'react-grid-layout';
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const Dashboard: React.FC = () => {
   const [activeChart, setActiveChart] = useState<'load' | 'velocity' | 'burndown' | 'cumulative'>('load');
+
+  // Layout Configuration
+  // 12 columns total
+  // rowHeight approx 30px + margin 10px
+  const defaultLayouts = {
+    lg: [
+      { i: 'info', x: 0, y: 0, w: 4, h: 13 },
+      { i: 'charts', x: 4, y: 0, w: 8, h: 13 },
+      { i: 'sprint', x: 0, y: 13, w: 12, h: 4 },
+      { i: 'versions', x: 0, y: 17, w: 8, h: 8 },
+      { i: 'mywork', x: 8, y: 17, w: 4, h: 10 },
+      { i: 'testplans', x: 0, y: 25, w: 8, h: 6 },
+      { i: 'activity', x: 8, y: 27, w: 4, h: 12 },
+      { i: 'docs', x: 0, y: 31, w: 8, h: 8 }
+    ]
+  };
 
   // Mock Data
   const metricsData = [
@@ -110,147 +129,145 @@ const Dashboard: React.FC = () => {
     </div>
   );
 
+  const WidgetHeader = ({ title, actions, dragHandleClass }: any) => (
+    <div className={`flex items-center justify-between mb-4 ${dragHandleClass} pb-2 border-b border-transparent hover:border-gray-50 transition-colors`}>
+      <h3 className="font-bold text-gray-900 flex items-center gap-2 pointer-events-none select-none">
+        <GripVertical className="w-4 h-4 text-gray-300" />
+        {title}
+      </h3>
+      <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
+        {actions}
+        <button className="p-1 text-gray-400 hover:bg-gray-100 rounded">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full bg-gray-50 overflow-y-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">项目概览</h1>
         <div className="flex gap-2">
-           <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-50 shadow-sm">编辑布局</button>
-           <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-50 shadow-sm"><MoreHorizontal className="w-4 h-4" /></button>
+           <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-50 shadow-sm flex items-center gap-2">
+             <Move className="w-4 h-4" /> 调整布局
+           </button>
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Top Row: Info & Charts */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Project Info */}
-          <div className="col-span-4 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="font-bold text-gray-900 mb-6">项目信息</h3>
-            <div className="flex justify-around mb-8">
-              <MetricCircle title="工作项完成率" value={16} data={metricsData} />
-              <MetricCircle title="工作项延误率" value={0} data={delayData} />
-              <MetricCircle title="工作项类型" value={100} data={typeData} />
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={defaultLayouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+        cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+        rowHeight={30}
+        draggableHandle=".drag-handle"
+        margin={[24, 24]}
+      >
+        {/* Project Info */}
+        <div key="info" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+          <WidgetHeader title="项目信息" dragHandleClass="drag-handle" />
+          <div className="flex justify-around mb-auto">
+            <MetricCircle title="工作项完成率" value={16} data={metricsData} />
+            <MetricCircle title="工作项延误率" value={0} data={delayData} />
+            <MetricCircle title="工作项类型" value={100} data={typeData} />
+          </div>
+          <div className="space-y-3 text-sm text-gray-600 bg-gray-50 p-4 rounded-md mt-4">
+            <div className="flex justify-between">
+              <span>项目负责人:</span>
+              <span className="text-gray-900 font-medium">looking4id</span>
             </div>
-            
-            <div className="space-y-3 text-sm text-gray-600 bg-gray-50 p-4 rounded-md">
-              <div className="flex justify-between">
-                <span>项目负责人:</span>
-                <span className="text-gray-900 font-medium">looking4id</span>
-              </div>
-              <div className="flex justify-between">
-                <span>项目编号:</span>
-                <span className="text-gray-900 font-medium">P1000</span>
-              </div>
-              <div className="flex justify-between">
-                <span>项目状态:</span>
-                <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs border border-blue-100">进行中</span>
-              </div>
-              <div className="pt-2 border-t border-gray-200 mt-2">
-                <p className="text-gray-500 text-xs leading-relaxed">
-                  这是一个自动创建的示例项目，如不需要可自行删除。包含敏捷开发的完整流程示例。
-                </p>
-              </div>
+            <div className="flex justify-between">
+              <span>项目编号:</span>
+              <span className="text-gray-900 font-medium">P1000</span>
+            </div>
+            <div className="flex justify-between">
+              <span>项目状态:</span>
+              <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs border border-blue-100">进行中</span>
             </div>
           </div>
+        </div>
 
-          {/* Charts */}
-          <div className="col-span-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex gap-6 border-b border-transparent">
-                 <button 
-                   onClick={() => setActiveChart('load')}
-                   className={`font-medium border-b-2 pb-1 text-sm transition-colors ${activeChart === 'load' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                   成员负荷报表
-                 </button>
-                 <button 
-                   onClick={() => setActiveChart('velocity')}
-                   className={`font-medium border-b-2 pb-1 text-sm transition-colors ${activeChart === 'velocity' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                   团队速度报表
-                 </button>
-                 <button 
-                   onClick={() => setActiveChart('burndown')}
-                   className={`font-medium border-b-2 pb-1 text-sm transition-colors ${activeChart === 'burndown' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                   燃尽图
-                 </button>
-                 <button 
-                   onClick={() => setActiveChart('cumulative')}
-                   className={`font-medium border-b-2 pb-1 text-sm transition-colors ${activeChart === 'cumulative' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                   累计新增趋势
-                 </button>
-              </div>
-              <button className="text-gray-400 hover:text-gray-600"><Zap className="w-4 h-4" /></button>
-            </div>
-            
-            <div className="flex-1 min-h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                {activeChart === 'load' ? (
-                  <BarChart data={memberLoadData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }} barSize={30}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar dataKey="task" stackId="a" fill="#3b82f6" name="任务" radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="bug" stackId="a" fill="#ef4444" name="缺陷" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                ) : activeChart === 'velocity' ? (
-                  <BarChart data={velocityData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }} barSize={20}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar dataKey="planned" fill="#d1d5db" name="计划完成" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="completed" fill="#10b981" name="实际完成" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                ) : activeChart === 'burndown' ? (
-                  <LineChart data={burndownData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Line type="monotone" dataKey="ideal" stroke="#d1d5db" strokeDasharray="5 5" name="理想剩余" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="actual" stroke="#f59e0b" name="实际剩余" strokeWidth={3} dot={{r: 4}} />
-                  </LineChart>
-                ) : (
-                  <AreaChart data={cumulativeData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorCreated" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#6b7280'}} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Area type="monotone" dataKey="created" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCreated)" name="累计创建" strokeWidth={2} />
-                    <Area type="monotone" dataKey="resolved" stroke="#10b981" fillOpacity={1} fill="url(#colorResolved)" name="累计完成" strokeWidth={2} />
-                  </AreaChart>
-                )}
-              </ResponsiveContainer>
-            </div>
+        {/* Charts */}
+        <div key="charts" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-6 drag-handle cursor-grab active:cursor-grabbing border-b border-transparent hover:border-gray-50 pb-2">
+             <div className="flex items-center gap-2 pointer-events-none select-none">
+                <GripVertical className="w-4 h-4 text-gray-300" />
+                <h3 className="font-bold text-gray-900">报表分析</h3>
+             </div>
+             <div className="flex gap-4 border-b border-transparent" onMouseDown={e => e.stopPropagation()}>
+                 <button onClick={() => setActiveChart('load')} className={`font-medium border-b-2 pb-1 text-sm ${activeChart === 'load' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}>成员负荷</button>
+                 <button onClick={() => setActiveChart('velocity')} className={`font-medium border-b-2 pb-1 text-sm ${activeChart === 'velocity' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}>团队速度</button>
+                 <button onClick={() => setActiveChart('burndown')} className={`font-medium border-b-2 pb-1 text-sm ${activeChart === 'burndown' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}>燃尽图</button>
+                 <button onClick={() => setActiveChart('cumulative')} className={`font-medium border-b-2 pb-1 text-sm ${activeChart === 'cumulative' ? 'text-pink-600 border-pink-600' : 'text-gray-500 border-transparent hover:text-gray-800'}`}>累计趋势</button>
+             </div>
+             <div onMouseDown={e => e.stopPropagation()}>
+               <button className="text-gray-400 hover:text-gray-600"><Zap className="w-4 h-4" /></button>
+             </div>
+          </div>
+          
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              {activeChart === 'load' ? (
+                <BarChart data={memberLoadData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={30}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
+                  <Bar dataKey="task" stackId="a" fill="#3b82f6" name="任务" radius={[0, 0, 4, 4]} />
+                  <Bar dataKey="bug" stackId="a" fill="#ef4444" name="缺陷" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              ) : activeChart === 'velocity' ? (
+                <BarChart data={velocityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={20}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
+                  <Bar dataKey="planned" fill="#d1d5db" name="计划完成" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed" fill="#10b981" name="实际完成" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              ) : activeChart === 'burndown' ? (
+                <LineChart data={burndownData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
+                  <Line type="monotone" dataKey="ideal" stroke="#d1d5db" strokeDasharray="5 5" name="理想剩余" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="actual" stroke="#f59e0b" name="实际剩余" strokeWidth={3} dot={{r: 4}} />
+                </LineChart>
+              ) : (
+                <AreaChart data={cumulativeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorCreated" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6b7280'}} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
+                  <Area type="monotone" dataKey="created" stroke="#3b82f6" fillOpacity={1} fill="url(#colorCreated)" name="累计创建" strokeWidth={2} />
+                  <Area type="monotone" dataKey="resolved" stroke="#10b981" fillOpacity={1} fill="url(#colorResolved)" name="累计完成" strokeWidth={2} />
+                </AreaChart>
+              )}
+            </ResponsiveContainer>
           </div>
         </div>
 
         {/* Iteration Strip */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-           <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">迭代</h3>
-              <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
-           </div>
+        <div key="sprint" className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col">
+           <WidgetHeader title="迭代" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
            
-           <div className="bg-gray-50 border border-gray-200 rounded-md p-4 flex items-center justify-between">
+           <div className="bg-gray-50 border border-gray-200 rounded-md p-4 flex items-center justify-between flex-1">
                <div className="flex items-center gap-4">
                    <div className="w-10 h-10 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-lg">Sp</div>
                    <div>
@@ -288,170 +305,133 @@ const Dashboard: React.FC = () => {
            </div>
         </div>
 
-        {/* Bottom Grid */}
-        <div className="grid grid-cols-12 gap-6">
-           {/* Left Column */}
-           <div className="col-span-8 space-y-6">
-               {/* Versions */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                   <div className="flex justify-between items-center mb-4">
-                       <h3 className="font-bold text-gray-900">版本</h3>
-                       <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
+        {/* Versions */}
+        <div key="versions" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+           <WidgetHeader title="版本" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
+           <div className="space-y-3 flex-1 overflow-auto">
+               <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded transition-colors border-b border-gray-50 last:border-0 cursor-pointer">
+                   <div className="flex items-center gap-3">
+                       <span className="bg-pink-700 text-white px-1.5 py-0.5 rounded text-xs font-mono">1.1</span>
+                       <span className="text-sm font-medium text-gray-800">【示例数据】协同点餐功能上线</span>
                    </div>
-                   <div className="space-y-3">
-                       <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded transition-colors border-b border-gray-50 last:border-0">
-                           <div className="flex items-center gap-3">
-                               <span className="bg-pink-700 text-white px-1.5 py-0.5 rounded text-xs font-mono">1.1</span>
-                               <span className="text-sm font-medium text-gray-800">【示例数据】协同点餐功能上线</span>
-                           </div>
-                           <div className="flex items-center gap-6 text-sm text-gray-500">
-                               <span>◎ 开发环境</span>
-                               <span>2025.08.16</span>
-                               <span className="flex items-center gap-1"><User className="w-3 h-3" /> looking4id</span>
-                               <span className="text-blue-600">22%</span>
-                           </div>
-                       </div>
-                       <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded transition-colors">
-                           <div className="flex items-center gap-3">
-                               <span className="bg-pink-700 text-white px-1.5 py-0.5 rounded text-xs font-mono">1.2</span>
-                               <span className="text-sm font-medium text-gray-800">【示例数据】自助开票功能上线</span>
-                           </div>
-                           <div className="flex items-center gap-6 text-sm text-gray-500">
-                               <span>◎ 开发环境</span>
-                               <span>2025.08.30</span>
-                               <span className="flex items-center gap-1"><User className="w-3 h-3" /> looking4id</span>
-                               <span className="text-gray-400">0%</span>
-                           </div>
-                       </div>
+                   <div className="flex items-center gap-4 text-sm text-gray-500">
+                       <span className="hidden xl:inline">◎ 开发环境</span>
+                       <span className="text-blue-600">22%</span>
                    </div>
                </div>
-
-               {/* Test Plans */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 min-h-[200px]">
-                   <div className="flex justify-between items-center mb-4">
-                       <h3 className="font-bold text-gray-900">测试计划</h3>
-                       <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
+               <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded transition-colors cursor-pointer">
+                   <div className="flex items-center gap-3">
+                       <span className="bg-pink-700 text-white px-1.5 py-0.5 rounded text-xs font-mono">1.2</span>
+                       <span className="text-sm font-medium text-gray-800">【示例数据】自助开票功能上线</span>
                    </div>
-                   <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                       <Box className="w-12 h-12 mb-2 opacity-20" />
-                       <span className="text-sm">暂无进行中的测试计划</span>
-                   </div>
-               </div>
-
-               {/* Documents */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                   <div className="flex justify-between items-center mb-4">
-                       <h3 className="font-bold text-gray-900">文档</h3>
-                       <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
-                   </div>
-                   <div className="space-y-4">
-                       {docs.map((doc, idx) => (
-                           <div key={idx} className="flex items-center justify-between text-sm group cursor-pointer">
-                               <div className="flex items-center gap-2">
-                                   <FileText className="w-4 h-4 text-blue-500" />
-                                   <span className="text-gray-700 group-hover:text-blue-600 transition-colors">{doc.title}</span>
-                               </div>
-                               <div className="flex items-center gap-4 text-xs text-gray-400">
-                                   <div className="flex items-center gap-1">
-                                       <div className="w-4 h-4 bg-amber-500 rounded-full text-white text-[9px] flex items-center justify-center">Lo</div>
-                                       {doc.author}
-                                   </div>
-                                   <span>{doc.time}</span>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-               </div>
-           </div>
-
-           {/* Right Column */}
-           <div className="col-span-4 space-y-6">
-               {/* My Work */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                   <div className="flex justify-between items-center mb-4">
-                       <h3 className="font-bold text-gray-900">我的工作项</h3>
-                       <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
-                   </div>
-                   <div className="flex gap-4 text-xs text-gray-500 border-b border-gray-100 pb-2 mb-3">
-                       <button className="text-pink-600 font-medium border-b-2 border-pink-600 pb-1">未完成</button>
-                       <button className="hover:text-gray-800 pb-1">今日</button>
-                       <button className="hover:text-gray-800 pb-1">本周</button>
-                       <button className="hover:text-gray-800 pb-1">已逾期</button>
-                   </div>
-                   <div className="space-y-3">
-                       {workItems.map(item => (
-                           <div key={item.id} className="group hover:bg-gray-50 p-2 rounded -mx-2 transition-colors cursor-pointer">
-                               <div className="flex items-start gap-2 mb-1">
-                                   {item.type === 'Bug' ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /> : <CheckSquare className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />}
-                                   <span className="text-xs text-gray-400 font-mono shrink-0">{item.id}</span>
-                                   <span className="text-sm text-gray-800 line-clamp-1 group-hover:text-blue-600">{item.title}</span>
-                               </div>
-                               <div className="flex items-center justify-between pl-6 mt-1">
-                                   <div className="flex items-center gap-2">
-                                       <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                           item.status === 'Done' ? 'bg-gray-100 text-gray-500 border-gray-200' : 
-                                           item.status === 'Fixing' ? 'bg-red-50 text-red-600 border-red-100' :
-                                           'bg-blue-50 text-blue-600 border-blue-100'
-                                       }`}>
-                                           {item.status}
-                                       </span>
-                                       <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                           item.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-200'
-                                       }`}>
-                                           {item.priority === 'High' ? '紧急' : item.priority}
-                                       </span>
-                                   </div>
-                                   <div className="flex items-center text-xs text-gray-400">
-                                       <div className="w-4 h-4 bg-amber-500 rounded-full text-white text-[9px] flex items-center justify-center mr-1">Lo</div>
-                                       looking4id
-                                       <span className="ml-2 text-red-400">{item.due}</span>
-                                   </div>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-               </div>
-
-               {/* Activity Stream */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                   <div className="flex justify-between items-center mb-4">
-                       <h3 className="font-bold text-gray-900">动态</h3>
-                       <button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>
-                   </div>
-                   <div className="space-y-6 relative">
-                       {/* Timeline Line */}
-                       <div className="absolute left-3.5 top-2 bottom-0 w-px bg-gray-100"></div>
-                       
-                       <div className="relative">
-                           <span className="bg-pink-100 text-pink-700 text-[10px] px-1.5 py-0.5 rounded-full relative z-10 border border-pink-200 font-medium">8月</span>
-                           <span className="text-xs text-gray-500 ml-2 font-medium">2025-08-02</span>
-                       </div>
-
-                       {activities.map((act, idx) => (
-                           <div key={idx} className="flex gap-3 relative">
-                               <div className="w-7 h-7 bg-amber-500 rounded-full text-white text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-sm z-10">Lo</div>
-                               <div className="flex-1 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                                   <div className="text-sm text-gray-800">
-                                       <span className="font-bold">{act.user}</span> 
-                                       <span className="mx-1 text-gray-500">{act.action}</span>
-                                   </div>
-                                   <div className="text-xs text-blue-600 hover:underline cursor-pointer mt-0.5">{act.target}</div>
-                                   <div className="text-xs text-gray-400 mt-1">{act.time}</div>
-                               </div>
-                           </div>
-                       ))}
-                       
-                       <div className="text-center pt-2">
-                           <button className="text-xs text-gray-400 hover:text-gray-600">加载更多</button>
-                       </div>
+                   <div className="flex items-center gap-4 text-sm text-gray-500">
+                       <span className="hidden xl:inline">◎ 开发环境</span>
+                       <span className="text-gray-400">0%</span>
                    </div>
                </div>
            </div>
         </div>
-      </div>
+
+        {/* Test Plans */}
+        <div key="testplans" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+           <WidgetHeader title="测试计划" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
+           <div className="flex flex-col items-center justify-center flex-1 text-gray-400">
+               <Box className="w-10 h-10 mb-2 opacity-20" />
+               <span className="text-sm">暂无进行中的测试计划</span>
+           </div>
+        </div>
+
+        {/* Documents */}
+        <div key="docs" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+           <WidgetHeader title="文档" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
+           <div className="space-y-4 flex-1 overflow-auto">
+               {docs.map((doc, idx) => (
+                   <div key={idx} className="flex items-center justify-between text-sm group cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors">
+                       <div className="flex items-center gap-2 overflow-hidden">
+                           <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                           <span className="text-gray-700 group-hover:text-blue-600 transition-colors truncate">{doc.title}</span>
+                       </div>
+                       <span className="text-xs text-gray-400 shrink-0">{doc.time}</span>
+                   </div>
+               ))}
+           </div>
+        </div>
+
+        {/* My Work */}
+        <div key="mywork" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+           <WidgetHeader title="我的工作项" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
+           <div className="flex gap-4 text-xs text-gray-500 border-b border-gray-100 pb-2 mb-3 shrink-0" onMouseDown={e => e.stopPropagation()}>
+               <button className="text-pink-600 font-medium border-b-2 border-pink-600 pb-1">未完成</button>
+               <button className="hover:text-gray-800 pb-1">今日</button>
+               <button className="hover:text-gray-800 pb-1">本周</button>
+               <button className="hover:text-gray-800 pb-1">已逾期</button>
+           </div>
+           <div className="space-y-3 flex-1 overflow-auto custom-scrollbar">
+               {workItems.map(item => (
+                   <div key={item.id} className="group hover:bg-gray-50 p-2 rounded -mx-2 transition-colors cursor-pointer border border-transparent hover:border-gray-100">
+                       <div className="flex items-start gap-2 mb-1">
+                           {item.type === 'Bug' ? <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" /> : <CheckSquare className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />}
+                           <span className="text-xs text-gray-400 font-mono shrink-0">{item.id}</span>
+                           <span className="text-sm text-gray-800 line-clamp-1 group-hover:text-blue-600">{item.title}</span>
+                       </div>
+                       <div className="flex items-center justify-between pl-6 mt-1">
+                           <div className="flex items-center gap-2">
+                               <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                   item.status === 'Done' ? 'bg-gray-100 text-gray-500 border-gray-200' : 
+                                   item.status === 'Fixing' ? 'bg-red-50 text-red-600 border-red-100' :
+                                   'bg-blue-50 text-blue-600 border-blue-100'
+                               }`}>
+                                   {item.status}
+                               </span>
+                               <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                   item.priority === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 border-gray-200'
+                               }`}>
+                                   {item.priority === 'High' ? '紧急' : item.priority}
+                               </span>
+                           </div>
+                           <div className="flex items-center text-xs text-gray-400">
+                               <span className="text-red-400">{item.due}</span>
+                           </div>
+                       </div>
+                   </div>
+               ))}
+           </div>
+        </div>
+
+        {/* Activity Stream */}
+        <div key="activity" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+           <WidgetHeader title="动态" dragHandleClass="drag-handle" actions={<button className="p-1 text-gray-400 hover:bg-gray-100 rounded"><ArrowUpRight className="w-4 h-4" /></button>} />
+           <div className="flex-1 overflow-auto space-y-6 relative custom-scrollbar">
+               {/* Timeline Line */}
+               <div className="absolute left-3.5 top-2 bottom-0 w-px bg-gray-100"></div>
+               
+               <div className="relative">
+                   <span className="bg-pink-100 text-pink-700 text-[10px] px-1.5 py-0.5 rounded-full relative z-10 border border-pink-200 font-medium">8月</span>
+                   <span className="text-xs text-gray-500 ml-2 font-medium">2025-08-02</span>
+               </div>
+
+               {activities.map((act, idx) => (
+                   <div key={idx} className="flex gap-3 relative">
+                       <div className="w-7 h-7 bg-amber-500 rounded-full text-white text-xs flex items-center justify-center shrink-0 border-2 border-white shadow-sm z-10">Lo</div>
+                       <div className="flex-1 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+                           <div className="text-sm text-gray-800">
+                               <span className="font-bold">{act.user}</span> 
+                               <span className="mx-1 text-gray-500">{act.action}</span>
+                           </div>
+                           <div className="text-xs text-blue-600 hover:underline cursor-pointer mt-0.5">{act.target}</div>
+                           <div className="text-xs text-gray-400 mt-1">{act.time}</div>
+                       </div>
+                   </div>
+               ))}
+               
+               <div className="text-center pt-2">
+                   <button className="text-xs text-gray-400 hover:text-gray-600">加载更多</button>
+               </div>
+           </div>
+        </div>
+      </ResponsiveGridLayout>
     </div>
   );
 };
 
 export default Dashboard;
-    

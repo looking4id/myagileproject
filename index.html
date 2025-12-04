@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -21,15 +22,68 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
       }
+
+      /* React Grid Layout Styles */
+      .react-grid-layout {
+        position: relative;
+        transition: height 200ms ease;
+      }
+      .react-grid-item {
+        transition: all 200ms ease;
+        transition-property: left, top;
+      }
+      .react-grid-item.cssTransforms {
+        transition-property: transform;
+      }
+      .react-grid-item.resizing {
+        z-index: 100;
+        box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      }
+      .react-grid-item.react-grid-placeholder {
+        background: rgba(0,0,0,0.05) !important;
+        border: 2px dashed rgba(0,0,0,0.1);
+        border-radius: 8px;
+        opacity: 0.8;
+        z-index: 2;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .react-resizable-handle {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        bottom: 0;
+        right: 0;
+        cursor: se-resize;
+        z-index: 10;
+      }
+      .react-resizable-handle::after {
+        content: "";
+        position: absolute;
+        right: 5px;
+        bottom: 5px;
+        width: 6px;
+        height: 6px;
+        border-right: 2px solid rgba(0,0,0,0.2);
+        border-bottom: 2px solid rgba(0,0,0,0.2);
+      }
+      .drag-handle {
+        cursor: grab;
+      }
+      .drag-handle:active {
+        cursor: grabbing;
+      }
     </style>
   <script type="importmap">
 {
   "imports": {
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
     "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0"
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-grid-layout": "https://esm.sh/react-grid-layout@1.5.0?external=react,react-dom"
   }
 }
 </script>
