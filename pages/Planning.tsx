@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Plus, Filter, Search, MoreHorizontal, Calendar as CalendarIcon, SlidersHorizontal, User, Tag, Settings, Eye, Columns, Check } from 'lucide-react';
+import { ChevronDown, Plus, Filter, Search, MoreHorizontal, Calendar as CalendarIcon, SlidersHorizontal, User, Tag, Settings, Eye, Columns, Check, ZoomIn, ZoomOut } from 'lucide-react';
 import { WorkItem, Priority, Status } from '../types';
 import Modal from '../components/Modal';
 
@@ -27,6 +27,8 @@ const formatDate = (date: Date) => {
 interface ExtendedWorkItem extends WorkItem {
   predecessors?: string[]; // IDs of tasks this item depends on
 }
+
+const VIEW_MODES = ['day', 'week', 'month', 'quarter'] as const;
 
 const Planning: React.FC = () => {
   // Timeline Configuration: Nov 1, 2025 to Dec 31, 2025
@@ -73,6 +75,42 @@ const Planning: React.FC = () => {
     initialStartDate: '',
     initialEndDate: ''
   });
+
+  // Zoom Logic
+  const zoomIn = () => {
+    const currentIndex = VIEW_MODES.indexOf(viewMode);
+    if (currentIndex > 0) {
+      setViewMode(VIEW_MODES[currentIndex - 1]);
+    }
+  };
+
+  const zoomOut = () => {
+    const currentIndex = VIEW_MODES.indexOf(viewMode);
+    if (currentIndex < VIEW_MODES.length - 1) {
+      setViewMode(VIEW_MODES[currentIndex + 1]);
+    }
+  };
+
+  // Wheel Zoom Listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onWheel = (e: WheelEvent) => {
+      // Ctrl + Wheel to zoom
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
+      }
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [viewMode]); // Re-bind when viewMode changes to capture latest state closure
 
   // Calculate Dynamic Gantt Width and Headers
   const ganttConfig = useMemo(() => {
@@ -357,7 +395,7 @@ const Planning: React.FC = () => {
              </div>
              
              <div className="flex bg-gray-100 p-1 rounded-md">
-                {(['day', 'week', 'month', 'quarter'] as const).map((mode) => (
+                {VIEW_MODES.map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setViewMode(mode)}
@@ -370,6 +408,26 @@ const Planning: React.FC = () => {
                     {mode === 'day' ? '日' : mode === 'week' ? '周' : mode === 'month' ? '月' : '季'}
                   </button>
                 ))}
+             </div>
+
+             <div className="flex items-center bg-gray-100 p-1 rounded-md">
+                <button 
+                  onClick={zoomOut} 
+                  disabled={viewMode === VIEW_MODES[VIEW_MODES.length - 1]}
+                  className="p-1 hover:bg-white rounded-sm text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                  title="缩小 (Ctrl+Scroll Down)"
+                >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-px h-3 bg-gray-300 mx-1"></div>
+                <button 
+                  onClick={zoomIn} 
+                  disabled={viewMode === VIEW_MODES[0]}
+                  className="p-1 hover:bg-white rounded-sm text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                  title="放大 (Ctrl+Scroll Up)"
+                >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                </button>
              </div>
 
              <button 
