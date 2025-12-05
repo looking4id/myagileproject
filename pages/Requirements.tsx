@@ -1,18 +1,40 @@
 
-import React, { useState, useMemo } from 'react';
-import { Search, Filter, Plus, ChevronDown, LayoutList, MoreHorizontal, User, Calendar, Tag, MessageSquare, Paperclip, CheckSquare, Clock, AlertCircle, X, ChevronRight, Edit3 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Filter, Plus, ChevronDown, LayoutList, MoreHorizontal, User, Calendar, Tag, MessageSquare, Paperclip, CheckSquare, Clock, AlertCircle, X, ChevronRight, Edit3, Kanban, FileText, Trash2, GripVertical } from 'lucide-react';
 import Modal from '../components/Modal';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 interface RequirementsProps {
   viewType: 'requirements' | 'tasks' | 'defects';
 }
 
+interface Column {
+  id: string;
+  title: string;
+  statuses: string[];
+  defaultStatus: string;
+}
+
+interface RequirementItem {
+  id: string;
+  title: string;
+  type: string;
+  priority: string;
+  status: string;
+  author: string;
+  created: string;
+  due: string;
+  desc: string;
+}
+
 const Requirements: React.FC<RequirementsProps> = ({ viewType }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<RequirementItem | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('board');
 
-  const items = [
+  // Kanban State
+  const [items, setItems] = useState<RequirementItem[]>([
     { id: 'ICQMBW', title: '【示例缺陷】手机号注册页面样式异常', type: 'Defect', priority: 'High', status: 'Fixing', author: 'looking4id', created: '8月2日 20:23', due: '08-16~08-30 逾期92天', desc: '在某些低分辨率手机上，注册页面的输入框对齐有问题，且验证码按钮显示不全。' },
     { id: 'ICQMBV', title: '【示例缺陷】多人在点餐页面卡顿', type: 'Defect', priority: 'High', status: 'Fixing', author: 'looking4id', created: '8月2日 20:23', due: '08-02~08-16 逾期106天', desc: '并发用户超过50人时，点餐页面加载延迟超过3秒，购物车同步有明显延迟。' },
     { id: 'ICQMBP', title: '【示例需求】支持微信小程序在线点餐', type: 'Req', priority: 'High', status: 'InProgress', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '用户可以通过微信小程序扫描桌码进行点餐，支持多人同时点餐，购物车实时同步。' },
@@ -22,47 +44,270 @@ const Requirements: React.FC<RequirementsProps> = ({ viewType }) => {
     { id: 'ICQMC8', title: '【示例任务】多人点餐 PRD 编写', type: 'Task', priority: 'High', status: 'Done', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '完成多人点餐功能的详细需求文档编写，包括流程图和交互原型。' },
     { id: 'ICQMC9', title: '【示例任务】前端页面切图', type: 'Task', priority: 'Medium', status: 'InProgress', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '根据UI设计稿完成点餐页面的HTML/CSS切图。' },
     { id: 'ICQMCB', title: '【示例任务】后端接口设计', type: 'Task', priority: 'High', status: 'ToDo', author: 'looking4id', created: '8月2日 20:24', due: '08-16~08-30 逾期92天', desc: '设计并输出多人点餐功能的后端API接口文档。' },
-  ];
+  ]);
+
+  const [columns, setColumns] = useState<Column[]>([
+    { id: 'col-todo', title: '待处理', statuses: ['ToDo'], defaultStatus: 'ToDo' },
+    { id: 'col-doing', title: '进行中', statuses: ['InProgress', 'Fixing'], defaultStatus: 'InProgress' },
+    { id: 'col-done', title: '已完成', statuses: ['Done', 'Verified'], defaultStatus: 'Done' }
+  ]);
+
+  // Column Management State
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [columnForm, setColumnForm] = useState({ id: '', title: '' });
+  const [isEditingColumn, setIsEditingColumn] = useState(false);
 
   const config = useMemo(() => {
     switch (viewType) {
-      case 'defects':
-        return {
-          title: '缺陷',
-          createBtn: '新建缺陷',
-          filterType: 'Defect'
-        };
-      case 'tasks':
-        return {
-          title: '任务',
-          createBtn: '新建任务',
-          filterType: 'Task'
-        };
-      case 'requirements':
-      default:
-        return {
-          title: '需求',
-          createBtn: '新建需求',
-          filterType: 'Req'
-        };
+      case 'defects': return { title: '缺陷', createBtn: '新建缺陷', filterType: 'Defect' };
+      case 'tasks': return { title: '任务', createBtn: '新建任务', filterType: 'Task' };
+      case 'requirements': default: return { title: '需求', createBtn: '新建需求', filterType: 'Req' };
     }
   }, [viewType]);
 
   const filteredItems = items.filter(item => item.type === config.filterType);
 
-  const openDetail = (item: any) => {
+  const openDetail = (item: RequirementItem) => {
     setSelectedItem(item);
     setIsDetailModalOpen(true);
+  };
+
+  // Drag and Drop Handlers
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId, type } = result;
+
+    if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Reordering Columns
+    if (type === 'column') {
+      const newColumns = Array.from(columns);
+      const [removed] = newColumns.splice(source.index, 1);
+      newColumns.splice(destination.index, 0, removed);
+      setColumns(newColumns);
+      return;
+    }
+
+    // Moving Cards
+    if (type === 'card') {
+      const startCol = columns.find(col => col.id === source.droppableId);
+      const finishCol = columns.find(col => col.id === destination.droppableId);
+
+      if (!startCol || !finishCol) return;
+
+      // Moving within the same column (Reorder not fully persisted in this simplified model, but needed for UI)
+      if (startCol === finishCol) {
+        // Since we are filtering items dynamically, reordering the 'items' array
+        // to reflect the new visual order is tricky without an explicit 'order' field.
+        // For this demo, we will just update the array order.
+        const newItems = Array.from(items);
+        const itemIndex = newItems.findIndex(i => i.id === draggableId);
+        // We are just updating state to trigger re-render if needed, but logic for reordering inside filtered list is skipped for brevity
+        return; 
+      }
+
+      // Moving to a different column
+      const newItems = items.map(item => {
+        if (item.id === draggableId) {
+          return { ...item, status: finishCol.defaultStatus };
+        }
+        return item;
+      });
+      setItems(newItems);
+    }
+  };
+
+  const handleAddColumn = () => {
+    setColumnForm({ id: '', title: '' });
+    setIsEditingColumn(false);
+    setShowColumnModal(true);
+  };
+
+  const handleEditColumn = (col: Column) => {
+    setColumnForm({ id: col.id, title: col.title });
+    setIsEditingColumn(true);
+    setShowColumnModal(true);
+  };
+
+  const handleDeleteColumn = (colId: string) => {
+    if (confirm('确定要删除此列吗？该列下的任务将不会被删除，但可能无法在看板中正确显示。')) {
+      setColumns(columns.filter(c => c.id !== colId));
+    }
+  };
+
+  const saveColumn = () => {
+    if (!columnForm.title) return;
+
+    if (isEditingColumn) {
+      setColumns(columns.map(c => c.id === columnForm.id ? { ...c, title: columnForm.title } : c));
+    } else {
+      const newId = `col-${Date.now()}`;
+      setColumns([...columns, { 
+        id: newId, 
+        title: columnForm.title, 
+        statuses: [columnForm.title], // Simplified status mapping
+        defaultStatus: columnForm.title 
+      }]);
+    }
+    setShowColumnModal(false);
+  };
+
+  const renderBoard = () => {
+    return (
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="all-columns" direction="horizontal" type="column">
+          {(provided) => (
+            <div 
+              className="flex-1 overflow-x-auto overflow-y-hidden p-6 bg-gray-50 flex h-full gap-6 min-w-max"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {columns.map((col, index) => {
+                const colItems = filteredItems.filter(item => col.statuses.includes(item.status) || item.status === col.defaultStatus);
+                
+                return (
+                  <Draggable key={col.id} draggableId={col.id} index={index}>
+                    {(provided) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="w-80 flex flex-col bg-gray-100/50 rounded-lg border border-gray-200 h-full max-h-full"
+                      >
+                        {/* Column Header */}
+                        <div 
+                          {...provided.dragHandleProps}
+                          className="p-3 flex items-center justify-between border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0 group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              col.id === 'col-done' ? 'bg-green-500' : 
+                              col.id === 'col-doing' ? 'bg-blue-500' : 
+                              col.id === 'col-todo' ? 'bg-gray-400' : 'bg-purple-500'
+                            }`}></span>
+                            <span className="font-semibold text-gray-700 text-sm">{col.title}</span>
+                            <span className="bg-white px-2 py-0.5 rounded-full text-xs text-gray-500 border border-gray-200 shadow-sm">
+                              {colItems.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                             <button onClick={() => handleEditColumn(col)} className="p-1 hover:bg-gray-200 rounded text-gray-500">
+                               <Edit3 className="w-3 h-3" />
+                             </button>
+                             <button onClick={() => handleDeleteColumn(col.id)} className="p-1 hover:bg-red-100 rounded text-red-500">
+                               <Trash2 className="w-3 h-3" />
+                             </button>
+                          </div>
+                        </div>
+
+                        {/* Cards Container */}
+                        <Droppable droppableId={col.id} type="card">
+                          {(provided, snapshot) => (
+                            <div 
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className={`p-3 flex-1 overflow-y-auto custom-scrollbar space-y-3 transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50' : ''}`}
+                            >
+                              {colItems.map((item, itemIndex) => (
+                                <Draggable key={item.id} draggableId={item.id} index={itemIndex}>
+                                  {(provided, snapshot) => (
+                                    <div 
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      onClick={() => openDetail(item)}
+                                      style={{ ...provided.draggableProps.style }}
+                                      className={`bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer group ${snapshot.isDragging ? 'rotate-2 shadow-lg ring-2 ring-pink-100' : ''}`}
+                                    >
+                                      <div className="flex justify-between items-start mb-2">
+                                        <span className="text-xs font-mono text-gray-500 bg-gray-50 px-1 rounded border border-gray-100">{item.id}</span>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                           <MoreHorizontal className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="mb-3">
+                                        <div className="flex items-start gap-1.5">
+                                           {item.type === 'Defect' && <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />}
+                                           {item.type === 'Req' && <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />}
+                                           {item.type === 'Task' && <CheckSquare className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />}
+                                           <span className="text-sm font-medium text-gray-800 line-clamp-2 hover:text-pink-600 transition-colors">{item.title}</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                        <div className="flex items-center gap-2">
+                                           <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
+                                           <span className="text-xs text-gray-500">{item.author}</span>
+                                        </div>
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                           item.priority === 'High' ? 'text-red-600 bg-red-50 border-red-100' : 
+                                           item.priority === 'Medium' ? 'text-orange-600 bg-orange-50 border-orange-100' :
+                                           'text-green-600 bg-green-50 border-green-100'
+                                        }`}>
+                                           {item.priority === 'High' ? '紧急' : item.priority === 'Medium' ? '高' : '中'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+              
+              {/* Add Column Button */}
+              <div className="w-80 shrink-0">
+                 <button 
+                   onClick={handleAddColumn}
+                   className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-pink-400 hover:text-pink-600 hover:bg-pink-50 transition-all flex items-center justify-center font-medium"
+                 >
+                    <Plus className="w-5 h-5 mr-2" /> 添加新列
+                 </button>
+              </div>
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+    );
   };
 
   return (
     <div className="h-full flex flex-col bg-white">
        {/* Header */}
-       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white sticky top-0 z-20">
            <div className="flex items-center gap-2">
                <h1 className="text-xl font-bold text-gray-900">{config.title}</h1>
            </div>
            <div className="flex gap-2">
+               <div className="flex bg-gray-100 rounded-md p-0.5 mr-2">
+                   <button 
+                     onClick={() => setViewMode('list')}
+                     className={`p-1.5 rounded-sm transition-colors ${viewMode === 'list' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                     title="列表视图"
+                   >
+                       <LayoutList className="w-4 h-4" />
+                   </button>
+                   <button 
+                     onClick={() => setViewMode('board')}
+                     className={`p-1.5 rounded-sm transition-colors ${viewMode === 'board' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                     title="看板视图"
+                   >
+                       <Kanban className="w-4 h-4" />
+                   </button>
+               </div>
                <button 
                   onClick={() => setShowCreateModal(true)}
                   className="bg-pink-700 text-white px-4 py-2 rounded shadow hover:bg-pink-800 flex items-center text-sm transition-colors"
@@ -74,111 +319,138 @@ const Requirements: React.FC<RequirementsProps> = ({ viewType }) => {
        </div>
 
        {/* Toolbar */}
-       <div className="p-4 flex items-center justify-between bg-gray-50 border-b border-gray-200">
+       <div className="p-4 flex items-center justify-between bg-white border-b border-gray-200 sticky top-[69px] z-10">
            <div className="flex items-center gap-3">
                <span className="text-sm text-gray-500">共 {filteredItems.length} 项</span>
                <div className="relative">
-                    <input type="text" placeholder="输入关键词" className="pl-3 pr-8 py-1.5 border border-gray-300 rounded text-sm w-48 focus:ring-1 focus:ring-blue-500 outline-none" />
-                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input type="text" placeholder="输入关键词" className="pl-8 pr-8 py-1.5 border border-gray-300 rounded text-sm w-48 focus:ring-1 focus:ring-blue-500 outline-none" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                </div>
                <div className="flex gap-2">
-                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50 transition-colors">
                        负责人 <ChevronDown className="w-3 h-3 ml-1" />
                    </button>
-                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50 transition-colors">
                        优先级 <ChevronDown className="w-3 h-3 ml-1" />
                    </button>
-                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50">
+                   <button className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-600 flex items-center hover:bg-gray-50 transition-colors">
                        状态 <ChevronDown className="w-3 h-3 ml-1" />
                    </button>
                </div>
            </div>
            <div className="flex items-center gap-3 text-sm text-gray-600">
                <button className="flex items-center hover:text-gray-900"><Filter className="w-4 h-4 mr-1" /> 筛选</button>
-               <button className="flex items-center hover:text-gray-900"><LayoutList className="w-4 h-4 mr-1" /> 表格</button>
            </div>
        </div>
 
-       {/* Table */}
-       <div className="flex-1 overflow-auto">
-           <table className="w-full text-left text-sm">
-               <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200 sticky top-0">
-                   <tr>
-                       <th className="px-4 py-3 w-8"><input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" /></th>
-                       <th className="px-4 py-3 w-24">ID</th>
-                       <th className="px-4 py-3">标题</th>
-                       <th className="px-4 py-3 w-20">优先级</th>
-                       <th className="px-4 py-3 w-24">标签</th>
-                       <th className="px-4 py-3 w-24">状态</th>
-                       <th className="px-4 py-3 w-32">创建时间</th>
-                       <th className="px-4 py-3 w-24">负责人</th>
-                       <th className="px-4 py-3 w-20">类型</th>
-                       <th className="px-4 py-3 w-48">计划时间</th>
-                   </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                   {filteredItems.length > 0 ? (
-                       filteredItems.map(item => (
-                           <tr 
-                              key={item.id} 
-                              onClick={() => openDetail(item)}
-                              className="hover:bg-gray-50 group transition-colors cursor-pointer"
-                           >
-                               <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                  <input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
-                               </td>
-                               <td className="px-4 py-3 text-gray-500 font-mono text-xs"><span className="bg-gray-100 rounded px-1.5 py-0.5">{item.id}</span></td>
-                               <td className="px-4 py-3">
-                                   <div className="flex items-center gap-2">
-                                       {item.type === 'Defect' ? (
-                                           <span className="bg-red-500 text-white p-0.5 rounded text-[10px] shrink-0">Bug</span>
-                                       ) : item.type === 'Task' ? (
-                                           <span className="bg-blue-400 text-white p-0.5 rounded text-[10px] shrink-0">Task</span>
-                                       ) : (
-                                           <span className="bg-blue-600 text-white p-0.5 rounded text-[10px] shrink-0">Req</span>
-                                       )}
-                                       <span className="text-gray-900 font-medium hover:text-pink-600">{item.title}</span>
-                                   </div>
-                               </td>
-                               <td className="px-4 py-3">
-                                   <span className={`border px-1.5 py-0.5 rounded text-xs ${item.priority === 'High' ? 'text-red-600 border-red-200 bg-red-50' : 'text-yellow-600 border-yellow-200 bg-yellow-50'}`}>
-                                       {item.priority === 'High' ? '紧急' : '高'}
-                                   </span>
-                               </td>
-                               <td className="px-4 py-3">
-                                   <span className="bg-blue-50 text-blue-700 text-xs px-1.5 py-0.5 rounded border border-blue-100">新手引导</span>
-                               </td>
-                               <td className="px-4 py-3">
-                                   <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded w-fit">
-                                       <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Verified' || item.status === 'Done' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-                                       {item.status === 'Fixing' ? '修复中' : item.status === 'Verified' ? '已修复' : item.status === 'Done' ? '已完成' : '进行中'}
-                                   </div>
-                               </td>
-                               <td className="px-4 py-3 text-gray-500 text-xs">{item.created}</td>
-                               <td className="px-4 py-3">
-                                   <div className="flex items-center gap-1">
-                                       <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
-                                       <span className="text-gray-600 text-xs">{item.author}</span>
-                                   </div>
-                               </td>
-                               <td className="px-4 py-3 text-gray-600 text-xs">
-                                   {item.type === 'Defect' ? '缺陷' : item.type === 'Task' ? '任务' : '需求'}
-                               </td>
-                               <td className="px-4 py-3 text-red-500 text-xs">{item.due}</td>
-                           </tr>
-                       ))
-                   ) : (
+       {/* Content Area */}
+       {viewMode === 'board' ? renderBoard() : (
+           <div className="flex-1 overflow-auto bg-white">
+               <table className="w-full text-left text-sm">
+                   <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200 sticky top-0 z-10">
                        <tr>
-                           <td colSpan={10} className="px-4 py-12 text-center text-gray-400">
-                               暂无数据
-                           </td>
+                           <th className="px-4 py-3 w-8"><input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" /></th>
+                           <th className="px-4 py-3 w-24">ID</th>
+                           <th className="px-4 py-3">标题</th>
+                           <th className="px-4 py-3 w-20">优先级</th>
+                           <th className="px-4 py-3 w-24">标签</th>
+                           <th className="px-4 py-3 w-24">状态</th>
+                           <th className="px-4 py-3 w-32">创建时间</th>
+                           <th className="px-4 py-3 w-24">负责人</th>
+                           <th className="px-4 py-3 w-20">类型</th>
+                           <th className="px-4 py-3 w-48">计划时间</th>
                        </tr>
-                   )}
-               </tbody>
-           </table>
-       </div>
+                   </thead>
+                   <tbody className="divide-y divide-gray-100">
+                       {filteredItems.length > 0 ? (
+                           filteredItems.map(item => (
+                               <tr 
+                                  key={item.id} 
+                                  onClick={() => openDetail(item)}
+                                  className="hover:bg-gray-50 group transition-colors cursor-pointer"
+                               >
+                                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                      <input type="checkbox" className="rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                                   </td>
+                                   <td className="px-4 py-3 text-gray-500 font-mono text-xs"><span className="bg-gray-100 rounded px-1.5 py-0.5">{item.id}</span></td>
+                                   <td className="px-4 py-3">
+                                       <div className="flex items-center gap-2">
+                                           {item.type === 'Defect' ? (
+                                               <span className="bg-red-500 text-white p-0.5 rounded text-[10px] shrink-0">Bug</span>
+                                           ) : item.type === 'Task' ? (
+                                               <span className="bg-blue-400 text-white p-0.5 rounded text-[10px] shrink-0">Task</span>
+                                           ) : (
+                                               <span className="bg-blue-600 text-white p-0.5 rounded text-[10px] shrink-0">Req</span>
+                                           )}
+                                           <span className="text-gray-900 font-medium hover:text-pink-600 transition-colors">{item.title}</span>
+                                       </div>
+                                   </td>
+                                   <td className="px-4 py-3">
+                                       <span className={`border px-1.5 py-0.5 rounded text-xs ${item.priority === 'High' ? 'text-red-600 border-red-200 bg-red-50' : 'text-yellow-600 border-yellow-200 bg-yellow-50'}`}>
+                                           {item.priority === 'High' ? '紧急' : '高'}
+                                       </span>
+                                   </td>
+                                   <td className="px-4 py-3">
+                                       <span className="bg-blue-50 text-blue-700 text-xs px-1.5 py-0.5 rounded border border-blue-100">新手引导</span>
+                                   </td>
+                                   <td className="px-4 py-3">
+                                       <div className="flex items-center gap-1 text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded w-fit">
+                                           <span className={`w-1.5 h-1.5 rounded-full ${item.status === 'Verified' || item.status === 'Done' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                                           {item.status === 'Fixing' ? '修复中' : item.status === 'Verified' ? '已修复' : item.status === 'Done' ? '已完成' : '进行中'}
+                                       </div>
+                                   </td>
+                                   <td className="px-4 py-3 text-gray-500 text-xs">{item.created}</td>
+                                   <td className="px-4 py-3">
+                                       <div className="flex items-center gap-1">
+                                           <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
+                                           <span className="text-gray-600 text-xs">{item.author}</span>
+                                       </div>
+                                   </td>
+                                   <td className="px-4 py-3 text-gray-600 text-xs">
+                                       {item.type === 'Defect' ? '缺陷' : item.type === 'Task' ? '任务' : '需求'}
+                                   </td>
+                                   <td className="px-4 py-3 text-red-500 text-xs">{item.due}</td>
+                               </tr>
+                           ))
+                       ) : (
+                           <tr>
+                               <td colSpan={10} className="px-4 py-12 text-center text-gray-400">
+                                   暂无数据
+                               </td>
+                           </tr>
+                       )}
+                   </tbody>
+               </table>
+           </div>
+       )}
 
-       {/* Create Modal - Context Aware */}
+       {/* Create/Edit Column Modal */}
+       <Modal
+          isOpen={showColumnModal}
+          onClose={() => setShowColumnModal(false)}
+          title={isEditingColumn ? "编辑列" : "添加新列"}
+          size="sm"
+          footer={
+             <>
+                <button onClick={() => setShowColumnModal(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
+                <button onClick={saveColumn} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800">保存</button>
+             </>
+          }
+       >
+          <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">列名称</label>
+             <input 
+                type="text" 
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none" 
+                placeholder="例如: 测试中, 待发布" 
+                autoFocus
+                value={columnForm.title}
+                onChange={(e) => setColumnForm({ ...columnForm, title: e.target.value })}
+             />
+          </div>
+       </Modal>
+
+       {/* Create Item Modal */}
        <Modal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
