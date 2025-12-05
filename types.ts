@@ -48,3 +48,64 @@ export interface Release {
   status: 'Released' | 'Planned' | 'Delayed';
   progress: number;
 }
+
+// --- Pipeline Editor Types ---
+
+export interface JobConfig {
+  timeout?: number;
+  repo?: string;
+  branch?: string;
+  image?: string;
+  dockerfile?: string;
+  context?: string;
+  jdkVersion?: string;
+  mvnCommand?: string;
+  goVersion?: string;
+  command?: string;
+  namespace?: string;
+  yamlPath?: string;
+  scanLevel?: string;
+  blockOnFailure?: boolean;
+  approvers?: string[];
+  script?: string;
+  scriptPath?: string;
+  chartType?: string;
+  showTooltips?: boolean;
+  [key: string]: any;
+}
+
+export interface Job {
+  id: string;
+  name: string;
+  type: string;
+  config: JobConfig;
+}
+
+export interface Stage {
+  id: string;
+  name: string;
+  isParallel?: boolean;
+  groups: Job[][];
+}
+
+export interface PipelineVariable {
+  id: string;
+  name: string;
+  type: 'string' | 'boolean' | 'enum';
+  defaultValue: string;
+  description?: string;
+}
+
+export interface PipelineSettings {
+  timeout: number;
+  retryCount: number;
+}
+
+export interface PipelineData {
+  id: string;
+  name: string;
+  description: string;
+  stages: Stage[];
+  variables: PipelineVariable[];
+  settings: PipelineSettings;
+}

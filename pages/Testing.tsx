@@ -5,11 +5,30 @@ import {
   Plus, Search, Filter, MoreHorizontal, ChevronDown, 
   Settings, AlertCircle, Clock,
   Calendar, Trash2, Edit2, CheckCircle2, PlayCircle, XCircle,
-  User
+  User, MinusCircle
 } from 'lucide-react';
 import Modal from '../components/Modal';
 
 type TestModule = 'cases' | 'reviews' | 'plans' | 'reports';
+
+interface TestStep {
+  id: number;
+  desc: string;
+  result: string;
+}
+
+interface TestCase {
+  id: string;
+  title: string;
+  version: string;
+  result: string;
+  type: string;
+  priority: string;
+  maintainer: string;
+  cited: number;
+  precondition?: string;
+  steps?: TestStep[];
+}
 
 interface TestPlan {
   id: string;
@@ -29,7 +48,7 @@ const Testing: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Detail Modal States
-  const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [isTestCaseDetailOpen, setIsTestCaseDetailOpen] = useState(false);
   
   const [selectedTestReview, setSelectedTestReview] = useState<any>(null);
@@ -119,14 +138,14 @@ const Testing: React.FC = () => {
   }, []);
 
   // Mock Data
-  const testCases = [
-    { id: 'CUMR1', title: '【示例数据】注册时提示密码强度', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P0', maintainer: 'looking4id', cited: 0 },
-    { id: 'CUMR3', title: '【示例数据】注册时校验用户名是否重复', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P0', maintainer: 'looking4id', cited: 0 },
+  const [testCases, setTestCases] = useState<TestCase[]>([
+    { id: 'CUMR1', title: '【示例数据】注册时提示密码强度', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P0', maintainer: 'looking4id', cited: 0, precondition: '用户已进入注册页面', steps: [{id: 1, desc: '输入弱密码', result: '提示弱'}, {id: 2, desc: '输入强密码', result: '提示强'}] },
+    { id: 'CUMR3', title: '【示例数据】注册时校验用户名是否重复', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P0', maintainer: 'looking4id', cited: 0, precondition: '数据库中已存在用户 user1', steps: [{id: 1, desc: '输入 user1', result: '提示重复'}] },
     { id: 'CUMR6', title: '【示例数据】未登录状态浏览商城', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P1', maintainer: 'looking4id', cited: 0 },
     { id: 'CUMR2', title: '【示例数据】注册页面可查看用户协议', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P1', maintainer: 'looking4id', cited: 0 },
     { id: 'CUMR4', title: '【示例数据】登录时记住用户名', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P2', maintainer: 'looking4id', cited: 0 },
     { id: 'CUMR5', title: '【示例数据】正常进入商城', version: '版本 1', result: '待评审', type: '功能测试', priority: 'P3', maintainer: 'looking4id', cited: 0 },
-  ];
+  ]);
 
   const testReviews = [
       { id: 'TR001', title: '【示例数据】商城系统-注册与登录', status: '进行中', owner: 'looking4id', reviewed: 2, total: 6, startTime: '2025-12-01', endTime: '2025-12-14' }
@@ -141,7 +160,7 @@ const Testing: React.FC = () => {
   ];
 
   // Logic Handlers
-  const handleCaseClick = (item: any) => {
+  const handleCaseClick = (item: TestCase) => {
       setSelectedTestCase(item);
       setIsTestCaseDetailOpen(true);
   };
@@ -157,33 +176,59 @@ const Testing: React.FC = () => {
       setIsTestPlanDetailOpen(true);
   };
 
-  const handleCreate = () => {
-      if (activeModule === 'plans') {
-          const newPlan: TestPlan = {
-              id: `TP${Date.now().toString().slice(-4)}`,
-              title: formData.title || '新测试计划',
-              status: '未开始',
-              owner: formData.owner || 'looking4id',
-              passed: 0,
-              total: 0,
-              percent: 0,
-              startDate: formData.startDate || new Date().toISOString().split('T')[0],
-              endDate: formData.endDate || new Date().toISOString().split('T')[0]
-          };
-          setTestPlans([newPlan, ...testPlans]);
-          setShowCreateModal(false);
-          setFormData({});
-      } else {
-          // Placeholder for other modules
-          setShowCreateModal(false);
+  // Create & Update Handler
+  const handleSave = () => {
+      if (!formData.title) {
+          alert('标题为必填项');
+          return;
       }
+
+      if (activeModule === 'cases') {
+          if (formData.id) {
+              // Update
+              setTestCases(prev => prev.map(c => c.id === formData.id ? { ...c, ...formData } : c));
+          } else {
+              // Create
+              const newCase: TestCase = {
+                  id: `CUMR${Date.now().toString().slice(-4)}`,
+                  title: formData.title,
+                  version: '版本 1',
+                  result: '待评审',
+                  type: formData.type || '功能测试',
+                  priority: formData.priority || 'P1',
+                  maintainer: 'looking4id',
+                  cited: 0,
+                  precondition: formData.precondition || '',
+                  steps: formData.steps || []
+              };
+              setTestCases([newCase, ...testCases]);
+          }
+      } else if (activeModule === 'plans') {
+          if (formData.id) {
+              setTestPlans(prev => prev.map(p => p.id === formData.id ? { ...p, ...formData } : p));
+          } else {
+              const newPlan: TestPlan = {
+                  id: `TP${Date.now().toString().slice(-4)}`,
+                  title: formData.title,
+                  status: '未开始',
+                  owner: formData.owner || 'looking4id',
+                  passed: 0,
+                  total: 0,
+                  percent: 0,
+                  startDate: formData.startDate || new Date().toISOString().split('T')[0],
+                  endDate: formData.endDate || new Date().toISOString().split('T')[0]
+              };
+              setTestPlans([newPlan, ...testPlans]);
+          }
+      }
+      
+      setShowCreateModal(false);
+      setFormData({});
   };
 
   const handleUpdatePlan = () => {
-      if (!selectedTestPlan) return;
-      setTestPlans(prev => prev.map(p => p.id === selectedTestPlan.id ? { ...p, ...formData } : p));
+      handleSave();
       setIsTestPlanDetailOpen(false);
-      setFormData({});
   };
 
   const handleDeletePlan = () => {
@@ -192,6 +237,46 @@ const Testing: React.FC = () => {
           setTestPlans(prev => prev.filter(p => p.id !== selectedTestPlan.id));
           setIsTestPlanDetailOpen(false);
       }
+  };
+
+  const handleEditCase = () => {
+      if (!selectedTestCase) return;
+      setFormData({ ...selectedTestCase });
+      setIsTestCaseDetailOpen(false);
+      setShowCreateModal(true);
+  };
+
+  const handleDeleteCase = () => {
+      if (!selectedTestCase) return;
+      if (window.confirm('确定要删除该测试用例吗？')) {
+          setTestCases(prev => prev.filter(c => c.id !== selectedTestCase.id));
+          setIsTestCaseDetailOpen(false);
+      }
+  };
+
+  // Step Management in Form
+  const addStep = () => {
+      const currentSteps = formData.steps || [];
+      setFormData({
+          ...formData,
+          steps: [...currentSteps, { id: Date.now(), desc: '', result: '' }]
+      });
+  };
+
+  const removeStep = (id: number) => {
+      const currentSteps = formData.steps || [];
+      setFormData({
+          ...formData,
+          steps: currentSteps.filter((s: TestStep) => s.id !== id)
+      });
+  };
+
+  const updateStep = (id: number, field: 'desc' | 'result', value: string) => {
+      const currentSteps = formData.steps || [];
+      setFormData({
+          ...formData,
+          steps: currentSteps.map((s: TestStep) => s.id === id ? { ...s, [field]: value } : s)
+      });
   };
 
   // Render Helpers
@@ -262,7 +347,7 @@ const Testing: React.FC = () => {
                   <div className="flex gap-2">
                      <button 
                         onClick={() => {
-                            setFormData({});
+                            setFormData(activeModule === 'cases' ? { steps: [] } : {});
                             setShowCreateModal(true);
                         }}
                         className="bg-pink-700 text-white px-4 py-2 rounded text-sm hover:bg-pink-800 flex items-center shadow-sm"
@@ -381,7 +466,7 @@ const Testing: React.FC = () => {
                           )}
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                          {activeModule === 'cases' && (filteredItems as typeof testCases).map(item => (
+                          {activeModule === 'cases' && (filteredItems as TestCase[]).map(item => (
                               <tr 
                                 key={item.id} 
                                 onClick={() => handleCaseClick(item)}
@@ -495,12 +580,12 @@ const Testing: React.FC = () => {
           </div>
       </div>
 
-      {/* Create Modal */}
+      {/* Create/Edit Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title={
-            activeModule === 'cases' ? '新建测试用例' : 
+            activeModule === 'cases' ? (formData.id ? '编辑测试用例' : '新建测试用例') : 
             activeModule === 'reviews' ? '新建测试评审' : 
             activeModule === 'plans' ? '新建测试计划' : '新建测试报告'
         }
@@ -508,7 +593,7 @@ const Testing: React.FC = () => {
         footer={
             <>
                <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
-               <button onClick={handleCreate} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800">确定</button>
+               <button onClick={handleSave} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800">确定</button>
             </>
         }
       >
@@ -530,16 +615,70 @@ const Testing: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
-                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white"><option>P0</option><option>P1</option><option>P2</option></select>
+                            <select 
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none"
+                                value={formData.priority || 'P1'}
+                                onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                            >
+                                <option>P0</option><option>P1</option><option>P2</option>
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">用例类型</label>
-                            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white"><option>功能测试</option><option>性能测试</option><option>安全测试</option></select>
+                            <select 
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-pink-500 outline-none"
+                                value={formData.type || '功能测试'}
+                                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                            >
+                                <option>功能测试</option><option>性能测试</option><option>安全测试</option>
+                            </select>
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">前置条件</label>
-                        <textarea className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-20 resize-none" placeholder="输入前置条件..."></textarea>
+                        <textarea 
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-20 resize-none focus:ring-pink-500 outline-none" 
+                            placeholder="输入前置条件..."
+                            value={formData.precondition || ''}
+                            onChange={(e) => setFormData({...formData, precondition: e.target.value})}
+                        ></textarea>
+                    </div>
+                    
+                    {/* Steps Editor */}
+                    <div className="border border-gray-200 rounded p-4 bg-gray-50">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-medium text-gray-700">测试步骤</label>
+                            <button onClick={addStep} className="text-xs text-blue-600 hover:underline flex items-center">
+                                <Plus className="w-3 h-3 mr-1" /> 添加步骤
+                            </button>
+                        </div>
+                        <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
+                            {(formData.steps || []).map((step: TestStep, index: number) => (
+                                <div key={step.id} className="flex gap-2 items-start">
+                                    <span className="text-xs text-gray-400 mt-2 w-4">{index + 1}.</span>
+                                    <input 
+                                        type="text" 
+                                        placeholder="步骤描述" 
+                                        className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-pink-500 outline-none"
+                                        value={step.desc}
+                                        onChange={(e) => updateStep(step.id, 'desc', e.target.value)}
+                                    />
+                                    <input 
+                                        type="text" 
+                                        placeholder="预期结果" 
+                                        className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-pink-500 outline-none"
+                                        value={step.result}
+                                        onChange={(e) => updateStep(step.id, 'result', e.target.value)}
+                                    />
+                                    <button onClick={() => removeStep(step.id)} className="text-gray-400 hover:text-red-500 p-1.5">
+                                        <MinusCircle className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                            {(!formData.steps || formData.steps.length === 0) && (
+                                <div className="text-center text-xs text-gray-400 py-2">暂无步骤，请点击右上角添加</div>
+                            )}
+                        </div>
                     </div>
                  </>
              )}
@@ -592,7 +731,7 @@ const Testing: React.FC = () => {
 
              <div>
                  <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                 <textarea className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-32 resize-none" placeholder="输入描述..."></textarea>
+                 <textarea className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-32 resize-none focus:ring-pink-500 outline-none" placeholder="输入描述..."></textarea>
              </div>
          </div>
       </Modal>
@@ -604,15 +743,28 @@ const Testing: React.FC = () => {
             onClose={() => setIsTestCaseDetailOpen(false)}
             title={`测试用例详情: ${selectedTestCase.id}`}
             size="2xl"
+            footer={
+                <div className="flex justify-between w-full">
+                    <button onClick={handleDeleteCase} className="px-4 py-2 text-red-600 border border-red-200 rounded text-sm hover:bg-red-50 flex items-center">
+                        <Trash2 className="w-4 h-4 mr-1" /> 删除
+                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsTestCaseDetailOpen(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">关闭</button>
+                        <button onClick={handleEditCase} className="px-4 py-2 bg-pink-700 text-white rounded text-sm hover:bg-pink-800 flex items-center">
+                            <Edit2 className="w-4 h-4 mr-1" /> 编辑
+                        </button>
+                    </div>
+                </div>
+            }
         >
-            <div className="flex h-[70vh] flex-col">
+            <div className="flex h-[60vh] flex-col">
                 <div className="flex-1 flex overflow-hidden">
                     <div className="flex-1 pr-6 overflow-y-auto custom-scrollbar">
                         <h2 className="text-xl font-bold text-gray-900 mb-4">{selectedTestCase.title}</h2>
                         <div className="space-y-6">
                             <div className="bg-gray-50 p-4 rounded border border-gray-100">
                                 <h3 className="text-sm font-bold text-gray-800 mb-2">前置条件</h3>
-                                <p className="text-sm text-gray-600">用户已注册且账号状态正常。</p>
+                                <p className="text-sm text-gray-600">{selectedTestCase.precondition || '无'}</p>
                             </div>
                             <div>
                                 <h3 className="text-sm font-bold text-gray-800 mb-2">测试步骤</h3>
@@ -625,21 +777,18 @@ const Testing: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td className="px-3 py-2 border-b">1</td>
-                                            <td className="px-3 py-2 border-b">进入注册页面，输入弱密码（如 123456）</td>
-                                            <td className="px-3 py-2 border-b">系统提示密码强度为“弱”</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-3 py-2 border-b">2</td>
-                                            <td className="px-3 py-2 border-b">输入中等强度密码（字母+数字）</td>
-                                            <td className="px-3 py-2 border-b">系统提示密码强度为“中”</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-3 py-2">3</td>
-                                            <td className="px-3 py-2">输入高强度密码（字母+数字+符号）</td>
-                                            <td className="px-3 py-2">系统提示密码强度为“强”</td>
-                                        </tr>
+                                        {(selectedTestCase.steps || []).map((step, index) => (
+                                            <tr key={step.id}>
+                                                <td className="px-3 py-2 border-b">{index + 1}</td>
+                                                <td className="px-3 py-2 border-b">{step.desc}</td>
+                                                <td className="px-3 py-2 border-b">{step.result}</td>
+                                            </tr>
+                                        ))}
+                                        {(!selectedTestCase.steps || selectedTestCase.steps.length === 0) && (
+                                            <tr>
+                                                <td colSpan={3} className="px-3 py-4 text-center text-gray-400">暂无步骤</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -648,7 +797,9 @@ const Testing: React.FC = () => {
                     <div className="w-64 border-l border-gray-200 pl-6 space-y-4 bg-gray-50 p-4 h-full overflow-y-auto">
                         <div>
                             <label className="text-xs text-gray-500 font-medium block mb-1">优先级</label>
-                            <span className="text-sm font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded">{selectedTestCase.priority}</span>
+                            <span className={`text-sm font-medium px-2 py-0.5 rounded ${
+                                selectedTestCase.priority === 'P0' ? 'text-red-600 bg-red-50' : 'text-orange-600 bg-orange-50'
+                            }`}>{selectedTestCase.priority}</span>
                         </div>
                         <div>
                             <label className="text-xs text-gray-500 font-medium block mb-1">维护人</label>

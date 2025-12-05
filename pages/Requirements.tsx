@@ -106,7 +106,7 @@ const Requirements: React.FC<RequirementsProps> = ({ viewType }) => {
         // Since we are filtering items dynamically, reordering the 'items' array
         // to reflect the new visual order is tricky without an explicit 'order' field.
         // For this demo, we will just update the array order.
-        const newItems = Array.from(items);
+        const newItems = [...items];
         const itemIndex = newItems.findIndex(i => i.id === draggableId);
         // We are just updating state to trigger re-render if needed, but logic for reordering inside filtered list is skipped for brevity
         return; 
