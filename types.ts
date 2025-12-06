@@ -1,5 +1,5 @@
 
-export type ViewState = 'planning' | 'requirements' | 'tasks' | 'defects' | 'iteration' | 'testing' | 'releases' | 'pipelines' | 'code' | 'dashboard' | 'metrics' | 'members' | 'settings';
+export type ViewState = 'planning' | 'requirements' | 'tasks' | 'defects' | 'iteration' | 'testing' | 'releases' | 'milestones' | 'risks' | 'pipelines' | 'code' | 'dashboard' | 'metrics' | 'members' | 'settings';
 
 export interface User {
   name: string;

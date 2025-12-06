@@ -9,6 +9,8 @@ import PullRequests from './pages/PullRequests';
 import Iterations from './pages/Iterations';
 import Requirements from './pages/Requirements';
 import Testing from './pages/Testing';
+import Milestones from './pages/Milestones';
+import Risks from './pages/Risks';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import { ViewState } from './types';
@@ -26,6 +28,10 @@ function App() {
         return <Pipelines />;
       case 'releases':
         return <Releases />;
+      case 'milestones':
+        return <Milestones />;
+      case 'risks':
+        return <Risks />;
       case 'code':
         return <PullRequests />;
       case 'iteration':

@@ -3,7 +3,7 @@ import React from 'react';
 import { 
   Layout, Calendar, FileText, CheckSquare, Bug, 
   GitPullRequest, PlayCircle, Layers, BarChart2, 
-  Settings, Users, BookOpen, FlaskConical
+  Settings, Users, BookOpen, FlaskConical, MapPin, ShieldAlert
 } from 'lucide-react';
 import { ViewState } from '../types';
 
@@ -22,6 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
     { id: 'iteration', label: '迭代', icon: Layers },
     { id: 'testing', label: '测试', icon: FlaskConical },
     { id: 'releases', label: '版本', icon: BookOpen },
+    { id: 'milestones', label: '里程碑', icon: MapPin },
+    { id: 'risks', label: '风险', icon: ShieldAlert, count: 2 },
     { id: 'code', label: '代码评审', icon: GitPullRequest, count: 1 },
     { id: 'pipelines', label: '流水线', icon: PlayCircle },
     { id: 'metrics', label: '效能度量', icon: BarChart2, badge: 'Beta' },
