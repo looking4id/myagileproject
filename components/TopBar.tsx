@@ -10,10 +10,6 @@ const TopBar: React.FC<{ title: string }> = ({ title }) => {
           <span className="mx-2">/</span>
           <span className="hover:text-gray-800 cursor-pointer">敏捷研发项目01</span>
         </div>
-        <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded border border-orange-200">
-          双十一年度特惠
-        </span>
-        <a href="#" className="text-blue-600 text-sm hover:underline">升级到付费版</a>
       </div>
 
       <div className="flex items-center gap-4">

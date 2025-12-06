@@ -39,7 +39,7 @@ const Iterations: React.FC = () => {
   // Navigation State
   const [view, setView] = useState<'list' | 'planning' | 'detail'>('list');
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
-  const [activeTab, setActiveTab] = useState<'items' | 'overview'>('items');
+  const [activeTab, setActiveTab] = useState<'overview' | 'items'>('overview');
   const [workItemViewMode, setWorkItemViewMode] = useState<'list' | 'board'>('list');
 
   // Modal State
@@ -412,16 +412,16 @@ const Iterations: React.FC = () => {
 
              <div className="flex gap-6 mt-6 border-b border-gray-100 -mb-4">
                  <button 
-                   onClick={() => setActiveTab('items')}
-                   className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'items' ? 'text-pink-700 border-pink-700' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                    工作项
-                 </button>
-                 <button 
                    onClick={() => setActiveTab('overview')}
                    className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'overview' ? 'text-pink-700 border-pink-700' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
                  >
                     概览
+                 </button>
+                 <button 
+                   onClick={() => setActiveTab('items')}
+                   className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'items' ? 'text-pink-700 border-pink-700' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
+                 >
+                    工作项
                  </button>
                  <button className="pb-3 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-800">
                     迭代文档

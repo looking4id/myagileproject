@@ -486,7 +486,7 @@ const Planning: React.FC = () => {
                    </th>
                    <th className="px-4 py-3">工作项</th>
                    {visibleColumns.status && <th className="px-4 py-3 w-24">状态</th>}
-                   {visibleColumns.assignee && <th className="px-4 py-3 w-32">负责人</th>}
+                   {visibleColumns.assignee && <th className="px-4 py-3 w-20">负责人</th>}
                    {visibleColumns.start && <th className="px-4 py-3 w-28">计划开始</th>}
                    {visibleColumns.end && <th className="px-4 py-3 w-28">计划完成</th>}
                 </tr>
@@ -521,9 +521,8 @@ const Planning: React.FC = () => {
                     )}
                     {visibleColumns.assignee && (
                       <td className="px-4 py-3">
-                          <div className="flex items-center">
-                              <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center mr-1">Lo</div>
-                              <span className="text-gray-600">{item.assignee.name}</span>
+                          <div className="flex items-center justify-center">
+                              <div className="w-6 h-6 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center cursor-pointer" title={item.assignee.name}>Lo</div>
                           </div>
                       </td>
                     )}
