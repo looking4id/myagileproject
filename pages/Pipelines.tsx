@@ -177,6 +177,27 @@ const Pipelines: React.FC = () => {
     }));
   };
 
+  const handleCopyStage = (stage: Stage) => {
+    const newStage: Stage = {
+      ...stage,
+      id: `stage-${Date.now()}`,
+      name: `${stage.name} (副本)`,
+      groups: stage.groups.map(group => 
+        group.map(job => ({
+          ...job,
+          id: `job-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+        }))
+      )
+    };
+
+    const index = pipelineData.stages.findIndex(s => s.id === stage.id);
+    if (index !== -1) {
+        const newStages = [...pipelineData.stages];
+        newStages.splice(index + 1, 0, newStage);
+        setPipelineData(prev => ({ ...prev, stages: newStages }));
+    }
+  };
+
   // Drag & Drop
   const onDragStart = (index: number) => setDraggedStageIndex(index);
   const onDragEnter = (index: number) => {
@@ -253,7 +274,7 @@ const Pipelines: React.FC = () => {
                                 onDeleteJob={handleDeleteJob}
                                 onDeleteStage={handleDeleteStage}
                                 onEditStage={handleEditStage}
-                                onAddStage={handleAddStage}
+                                onCopyStage={handleCopyStage}
                                 onDragStart={onDragStart}
                                 onDragEnter={onDragEnter}
                                 onDragEnd={onDragEnd}

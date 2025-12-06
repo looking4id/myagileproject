@@ -30,7 +30,10 @@ import {
   ScrollText,
   Loader2,
   CircleDashed,
-  Workflow
+  Workflow,
+  Copy,
+  HelpCircle,
+  Move
 } from 'lucide-react';
 
 export const Icons = {
@@ -64,5 +67,8 @@ export const Icons = {
   ScrollText,
   Loader2,
   CircleDashed,
-  Workflow
+  Workflow,
+  Copy,
+  HelpCircle,
+  Move
 };

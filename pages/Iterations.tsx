@@ -4,7 +4,8 @@ import {
   Plus, Search, MoreHorizontal, Calendar, 
   ChevronRight, ArrowLeft, BarChart2, 
   CheckSquare, Clock, Filter, AlertCircle,
-  TrendingDown, CheckCircle2, Columns
+  TrendingDown, CheckCircle2, Columns, LayoutList,
+  Target, GripVertical, ChevronDown, User, FileText
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Modal from '../components/Modal';
@@ -36,9 +37,10 @@ interface WorkItem {
 
 const Iterations: React.FC = () => {
   // Navigation State
-  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [view, setView] = useState<'list' | 'planning' | 'detail'>('list');
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
-  const [activeTab, setActiveTab] = useState<'items' | 'board' | 'overview'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'overview'>('items');
+  const [workItemViewMode, setWorkItemViewMode] = useState<'list' | 'board'>('list');
 
   // Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,7 +56,7 @@ const Iterations: React.FC = () => {
       goal: '修复微信小程序在线点餐系统所存在的缺陷，并实现基础的性能优化。',
       owner: 'looking4id',
       progress: 22,
-      totalWorkItems: 18,
+      totalWorkItems: 9,
       completedWorkItems: 4,
       totalHours: 240
     },
@@ -67,14 +69,23 @@ const Iterations: React.FC = () => {
       goal: '小程序端支持用户自助开票，后台需增加发票管理系统。',
       owner: 'looking4id',
       progress: 0,
-      totalWorkItems: 7,
+      totalWorkItems: 5,
       completedWorkItems: 0,
       totalHours: 240
     }
   ]);
 
+  // Mock Data: Backlog Items (Unplanned)
+  const [backlogItems, setBacklogItems] = useState<WorkItem[]>([
+    { id: '110', title: '【示例需求】支持支付宝支付', type: 'Feature', status: 'ToDo', priority: 'Medium', owner: 'looking4id', storyPoints: 8 },
+    { id: '111', title: '【示例缺陷】库存扣减异常', type: 'Bug', status: 'ToDo', priority: 'High', owner: 'dev01', storyPoints: 5 },
+    { id: '112', title: '【示例任务】优化数据库索引', type: 'Task', status: 'ToDo', priority: 'Low', owner: 'dba', storyPoints: 3 },
+    { id: '113', title: '【示例需求】用户画像分析报表', type: 'Feature', status: 'ToDo', priority: 'Medium', owner: 'pm', storyPoints: 13 },
+    { id: '114', title: '【示例缺陷】IOS 15 兼容性问题', type: 'Bug', status: 'ToDo', priority: 'Medium', owner: 'dev02', storyPoints: 5 },
+  ]);
+
   // Mock Data: Work Items for Sprint 1
-  const sprintItems: WorkItem[] = [
+  const [sprintItems, setSprintItems] = useState<WorkItem[]>([
     { id: '101', title: '【示例缺陷】多人进入系统后，菜品有概率被重复添加', type: 'Bug', status: 'InProgress', priority: 'High', owner: 'looking4id', storyPoints: 3 },
     { id: '102', title: '【示例缺陷】多人进入系统后，订单可被重复付款', type: 'Bug', status: 'InProgress', priority: 'High', owner: 'looking4id', storyPoints: 5 },
     { id: '103', title: '【示例任务】后端接口：菜品点赞接口', type: 'Task', status: 'ToDo', priority: 'Medium', owner: 'looking4id', storyPoints: 2 },
@@ -84,7 +95,7 @@ const Iterations: React.FC = () => {
     { id: '107', title: '【示例任务】后端任务：删除菜品接口', type: 'Task', status: 'Done', priority: 'Medium', owner: 'looking4id', storyPoints: 2 },
     { id: '108', title: '【示例任务】后端任务：编辑菜品接口', type: 'Task', status: 'Done', priority: 'Medium', owner: 'looking4id', storyPoints: 2 },
     { id: '109', title: '【示例任务】多人点餐测试任务', type: 'Task', status: 'ToDo', priority: 'High', owner: 'looking4id', storyPoints: 5 },
-  ];
+  ]);
 
   // Mock Data: Burndown
   const burnDownData = [
@@ -102,26 +113,47 @@ const Iterations: React.FC = () => {
     setView('detail');
   };
 
+  const assignToSprint = (item: WorkItem, sprintId: string) => {
+      // Simulate moving item
+      const newItem = { ...item };
+      setBacklogItems(prev => prev.filter(i => i.id !== item.id));
+      if (sprintId === 'S1') {
+          setSprintItems(prev => [...prev, newItem]);
+          setSprints(prev => prev.map(s => s.id === 'S1' ? { ...s, totalWorkItems: s.totalWorkItems + 1 } : s));
+      }
+      // In a real app, update other sprints or backend
+  };
+
   const getStatusBadge = (status: Sprint['status']) => {
     switch (status) {
       case 'running':
         return <span className="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-xs">进行中</span>;
       case 'planned':
-        return <span className="text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded text-xs">待开始</span>;
+        return <span className="text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded text-xs">未开始</span>;
       case 'completed':
         return <span className="text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded text-xs">已完成</span>;
     }
   };
 
-  const renderList = () => (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white">
+  // --- Views ---
+
+  const renderHeader = (mode: 'list' | 'planning') => (
+      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-white sticky top-0 z-10">
         <div className="flex items-center gap-6">
            <h1 className="text-2xl font-bold text-gray-900">迭代</h1>
            <div className="flex space-x-6">
-              <button className="text-pink-700 font-medium border-b-2 border-pink-700 pb-2 px-1">列表</button>
-              <button className="text-gray-500 hover:text-gray-800 pb-2 px-1 transition-colors">规划</button>
+              <button 
+                onClick={() => setView('list')}
+                className={`pb-2 px-1 text-sm font-medium transition-colors ${mode === 'list' ? 'text-pink-700 border-b-2 border-pink-700' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                  列表
+              </button>
+              <button 
+                onClick={() => setView('planning')}
+                className={`pb-2 px-1 text-sm font-medium transition-colors ${mode === 'planning' ? 'text-pink-700 border-b-2 border-pink-700' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                  规划
+              </button>
            </div>
         </div>
         <div className="flex items-center gap-3">
@@ -133,6 +165,11 @@ const Iterations: React.FC = () => {
            </button>
         </div>
       </div>
+  );
+
+  const renderList = () => (
+    <div className="flex flex-col h-full bg-white">
+      {renderHeader('list')}
 
       {/* Toolbar */}
       <div className="px-6 py-3 bg-white border-b border-gray-200 flex justify-between items-center">
@@ -165,7 +202,7 @@ const Iterations: React.FC = () => {
                   <div className="flex items-start justify-between mb-3">
                       <div className="flex items-start gap-4">
                           <div className={`w-10 h-10 rounded flex items-center justify-center text-white font-bold shrink-0 ${sprint.status === 'running' ? 'bg-orange-500' : 'bg-cyan-500'}`}>
-                             {sprint.id === 'S1' ? 'Sp' : 'Sp'}
+                             {sprint.id}
                           </div>
                           <div>
                               <div className="flex items-center gap-3 mb-1">
@@ -180,7 +217,7 @@ const Iterations: React.FC = () => {
                               <div className="text-xs text-gray-400 mb-1">工作项进度</div>
                               <div className="flex items-center gap-2 w-32">
                                   <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${sprint.progress}%` }}></div>
+                                      <div className={`h-full rounded-full ${sprint.progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${sprint.progress}%` }}></div>
                                   </div>
                                   <span className="text-xs text-gray-600">{sprint.completedWorkItems}/{sprint.totalWorkItems}</span>
                               </div>
@@ -212,6 +249,119 @@ const Iterations: React.FC = () => {
          </div>
       </div>
     </div>
+  );
+
+  const renderPlanning = () => (
+      <div className="flex flex-col h-full bg-gray-50">
+          {renderHeader('planning')}
+          
+          <div className="flex-1 flex overflow-hidden p-6 gap-6">
+              {/* Left: Backlog / Unplanned */}
+              <div className="w-1/3 flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm">
+                  <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-lg">
+                      <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                          <LayoutList className="w-4 h-4 text-gray-500" />
+                          待规划工作项
+                          <span className="text-xs font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">{backlogItems.length}</span>
+                      </h3>
+                      <div className="flex gap-2">
+                          <button className="p-1 hover:bg-gray-200 rounded text-gray-500"><Filter className="w-4 h-4" /></button>
+                          <button className="p-1 hover:bg-gray-200 rounded text-gray-500"><Search className="w-4 h-4" /></button>
+                      </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50/50">
+                      {backlogItems.map(item => (
+                          <div key={item.id} className="bg-white p-3 rounded border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all group relative">
+                              <div className="flex items-start gap-2">
+                                  <div className="mt-0.5">
+                                      {item.type === 'Bug' ? <AlertCircle className="w-4 h-4 text-red-500" /> : 
+                                       item.type === 'Task' ? <CheckSquare className="w-4 h-4 text-blue-400" /> :
+                                       <FileText className="w-4 h-4 text-blue-600" />}
+                                  </div>
+                                  <div className="flex-1">
+                                      <div className="text-sm font-medium text-gray-800 mb-1">{item.title}</div>
+                                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                                          <span className="bg-gray-100 px-1.5 rounded">{item.id}</span>
+                                          <span>{item.priority}</span>
+                                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> {item.owner}</span>
+                                      </div>
+                                  </div>
+                              </div>
+                              {/* Quick Assign Action */}
+                              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={() => assignToSprint(item, 'S1')}
+                                    className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                                  >
+                                      规划到 Sprint1 <ChevronRight className="w-3 h-3" />
+                                  </button>
+                              </div>
+                          </div>
+                      ))}
+                      {backlogItems.length === 0 && (
+                          <div className="text-center py-10 text-gray-400 text-sm">暂无待规划事项</div>
+                      )}
+                  </div>
+              </div>
+
+              {/* Right: Sprints */}
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                  {sprints.map(sprint => (
+                      <div key={sprint.id} className="bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col">
+                          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-lg">
+                              <div className="flex items-center gap-3">
+                                  <span className={`w-8 h-8 rounded flex items-center justify-center text-white font-bold text-xs ${sprint.status === 'running' ? 'bg-orange-500' : 'bg-cyan-500'}`}>
+                                      {sprint.id}
+                                  </span>
+                                  <div>
+                                      <h3 className="font-bold text-gray-900">{sprint.title}</h3>
+                                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                                          <span>{sprint.startDate} - {sprint.endDate}</span>
+                                          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                          <span>{getStatusBadge(sprint.status)}</span>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                      <div className="text-xs text-gray-500">容量</div>
+                                      <div className="text-sm font-medium">0 / {sprint.totalHours}h</div>
+                                  </div>
+                                  <button className="p-1 hover:bg-gray-200 rounded text-gray-500"><MoreHorizontal className="w-5 h-5" /></button>
+                              </div>
+                          </div>
+                          
+                          {/* Sprint Items Preview (Planning Mode) */}
+                          <div className="p-2 bg-gray-50/30 min-h-[100px]">
+                              {sprint.id === 'S1' ? (
+                                  <div className="grid grid-cols-2 gap-2">
+                                      {sprintItems.map(item => (
+                                          <div key={item.id} className="bg-white p-2 rounded border border-gray-100 flex items-center gap-2 text-sm text-gray-700 shadow-sm">
+                                              {item.type === 'Bug' ? <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" /> : <CheckSquare className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
+                                              <span className="truncate flex-1">{item.title}</span>
+                                              <span className="text-xs text-gray-400 shrink-0">{item.owner}</span>
+                                          </div>
+                                      ))}
+                                  </div>
+                              ) : (
+                                  <div className="text-center py-4 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded m-2">
+                                      拖拽工作项到此处进行规划
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  ))}
+                  
+                  {/* New Sprint Placeholder */}
+                  <button 
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-center text-gray-500 hover:border-pink-400 hover:text-pink-600 hover:bg-pink-50 transition-all"
+                  >
+                      <Plus className="w-5 h-5 mr-2" /> 创建新迭代
+                  </button>
+              </div>
+          </div>
+      </div>
   );
 
   const renderDetail = () => {
@@ -268,12 +418,6 @@ const Iterations: React.FC = () => {
                     工作项
                  </button>
                  <button 
-                   onClick={() => setActiveTab('board')}
-                   className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'board' ? 'text-pink-700 border-pink-700' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
-                 >
-                    看板
-                 </button>
-                 <button 
                    onClick={() => setActiveTab('overview')}
                    className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'overview' ? 'text-pink-700 border-pink-700' : 'text-gray-500 border-transparent hover:text-gray-800'}`}
                  >
@@ -288,15 +432,33 @@ const Iterations: React.FC = () => {
          {/* Tab Content */}
          <div className="flex-1 overflow-auto p-6">
              {activeTab === 'items' && (
-                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                     <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                 <div className="flex flex-col h-full bg-transparent">
+                     {/* Items Toolbar with View Switcher */}
+                     <div className="p-3 border border-gray-200 border-b-0 rounded-t-lg flex justify-between items-center bg-gray-50">
                          <div className="flex gap-2">
                              <button className="text-sm font-medium text-gray-700 px-3 py-1 rounded bg-white border border-gray-200 shadow-sm">所有</button>
                              <button className="text-sm font-medium text-gray-500 px-3 py-1 rounded hover:bg-gray-200 transition-colors">需求</button>
                              <button className="text-sm font-medium text-gray-500 px-3 py-1 rounded hover:bg-gray-200 transition-colors">任务</button>
                              <button className="text-sm font-medium text-gray-500 px-3 py-1 rounded hover:bg-gray-200 transition-colors">缺陷</button>
                          </div>
-                         <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-3">
+                             <div className="flex bg-white rounded-md p-0.5 border border-gray-200">
+                                 <button
+                                     onClick={() => setWorkItemViewMode('list')}
+                                     className={`p-1.5 rounded-sm transition-colors ${workItemViewMode === 'list' ? 'bg-gray-100 text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
+                                     title="列表视图"
+                                 >
+                                     <LayoutList className="w-4 h-4" />
+                                 </button>
+                                 <button
+                                     onClick={() => setWorkItemViewMode('board')}
+                                     className={`p-1.5 rounded-sm transition-colors ${workItemViewMode === 'board' ? 'bg-gray-100 text-pink-600' : 'text-gray-500 hover:text-gray-800'}`}
+                                     title="看板视图"
+                                 >
+                                     <Columns className="w-4 h-4" />
+                                 </button>
+                             </div>
+                             <div className="h-4 w-px bg-gray-300"></div>
                              <div className="relative">
                                  <input type="text" placeholder="搜索工作项" className="pl-8 pr-4 py-1.5 border border-gray-300 rounded text-sm w-48 focus:ring-1 focus:ring-pink-500 outline-none bg-white" />
                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -304,104 +466,107 @@ const Iterations: React.FC = () => {
                              <button className="text-gray-500 hover:bg-gray-200 p-1.5 rounded"><Filter className="w-4 h-4" /></button>
                          </div>
                      </div>
-                     <table className="w-full text-left text-sm">
-                         <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-                             <tr>
-                                 <th className="px-4 py-3 w-10"><input type="checkbox" className="rounded border-gray-300" /></th>
-                                 <th className="px-4 py-3">ID</th>
-                                 <th className="px-4 py-3">标题</th>
-                                 <th className="px-4 py-3">状态</th>
-                                 <th className="px-4 py-3">优先级</th>
-                                 <th className="px-4 py-3">负责人</th>
-                                 <th className="px-4 py-3">操作</th>
-                             </tr>
-                         </thead>
-                         <tbody className="divide-y divide-gray-100">
-                             {sprintItems.map(item => (
-                                 <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                                     <td className="px-4 py-3"><input type="checkbox" className="rounded border-gray-300" /></td>
-                                     <td className="px-4 py-3 text-gray-500 text-xs font-mono">{item.id}</td>
-                                     <td className="px-4 py-3">
-                                         <div className="flex items-center gap-2">
-                                             {item.type === 'Bug' ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckSquare className="w-4 h-4 text-blue-500" />}
-                                             <span className="text-gray-800 font-medium group-hover:text-blue-600 cursor-pointer">{item.title}</span>
-                                         </div>
-                                     </td>
-                                     <td className="px-4 py-3">
-                                         {item.status === 'Done' ? (
-                                             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1"><CheckCircle2 className="w-3 h-3" /> 已完成</span>
-                                         ) : item.status === 'InProgress' ? (
-                                             <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1"><Clock className="w-3 h-3" /> 进行中</span>
-                                         ) : (
-                                             <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1">待办</span>
-                                         )}
-                                     </td>
-                                     <td className="px-4 py-3">
-                                         <span className={`text-xs px-2 py-0.5 rounded border ${
-                                             item.priority === 'High' ? 'text-red-600 bg-red-50 border-red-100' : 'text-orange-600 bg-orange-50 border-orange-100'
-                                         }`}>{item.priority === 'High' ? '紧急' : '普通'}</span>
-                                     </td>
-                                     <td className="px-4 py-3">
-                                         <div className="flex items-center gap-2">
-                                             <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
-                                             <span className="text-gray-600 text-xs">{item.owner}</span>
-                                         </div>
-                                     </td>
-                                     <td className="px-4 py-3 text-gray-400">
-                                         <MoreHorizontal className="w-4 h-4 cursor-pointer hover:text-gray-600" />
-                                     </td>
-                                 </tr>
-                             ))}
-                         </tbody>
-                     </table>
-                 </div>
-             )}
 
-             {activeTab === 'board' && (
-                 <div className="flex h-full gap-4 overflow-x-auto pb-2">
-                    {/* Columns */}
-                    {['ToDo', 'InProgress', 'Done'].map(status => (
-                        <div key={status} className="flex-1 min-w-[300px] bg-gray-100/70 rounded-lg flex flex-col max-h-full border border-gray-200">
-                            <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-gray-200 bg-gray-50 rounded-t-lg">
-                                <span className="flex items-center gap-2">
-                                    <span className={`w-2 h-2 rounded-full ${status === 'Done' ? 'bg-green-500' : status === 'InProgress' ? 'bg-blue-500' : 'bg-gray-400'}`}></span>
-                                    {status === 'ToDo' ? '待办' : status === 'InProgress' ? '进行中' : '已完成'}
-                                </span>
-                                <span className="bg-white border border-gray-200 px-2 py-0.5 rounded-full text-xs text-gray-600 font-medium shadow-sm">
-                                    {sprintItems.filter(i => i.status === status).length}
-                                </span>
-                            </div>
-                            <div className="p-3 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
-                                {sprintItems.filter(i => i.status === status).map(item => (
-                                    <div key={item.id} className="bg-white p-3 rounded-md shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="text-xs text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 group-hover:border-blue-100 group-hover:text-blue-500 transition-colors">{item.id}</span>
-                                            <MoreHorizontal className="w-4 h-4 text-gray-300 hover:text-gray-600" />
-                                        </div>
-                                        <div className="mb-3 text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
-                                            {item.type === 'Bug' && <AlertCircle className="w-3.5 h-3.5 text-red-500 inline mr-1.5 -mt-0.5" />}
-                                            {item.type === 'Feature' && <CheckSquare className="w-3.5 h-3.5 text-blue-500 inline mr-1.5 -mt-0.5" />}
-                                            {item.type === 'Task' && <CheckSquare className="w-3.5 h-3.5 text-sky-400 inline mr-1.5 -mt-0.5" />}
-                                            <span className="group-hover:text-blue-600 transition-colors">{item.title}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center ring-2 ring-white">Lo</div>
-                                                <span className="text-xs text-gray-500">{item.owner}</span>
-                                            </div>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                                item.priority === 'High' ? 'text-red-600 border-red-100 bg-red-50' : 
-                                                item.priority === 'Medium' ? 'text-orange-600 border-orange-100 bg-orange-50' : 
-                                                'text-gray-600 border-gray-100 bg-gray-50'
-                                            }`}>
-                                                {item.priority === 'High' ? 'High' : item.priority}
-                                            </span>
-                                        </div>
+                     {workItemViewMode === 'list' ? (
+                         <div className="bg-white border border-gray-200 rounded-b-lg shadow-sm">
+                             <table className="w-full text-left text-sm">
+                                 <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                                     <tr>
+                                         <th className="px-4 py-3 w-10"><input type="checkbox" className="rounded border-gray-300" /></th>
+                                         <th className="px-4 py-3">ID</th>
+                                         <th className="px-4 py-3">标题</th>
+                                         <th className="px-4 py-3">状态</th>
+                                         <th className="px-4 py-3">优先级</th>
+                                         <th className="px-4 py-3">负责人</th>
+                                         <th className="px-4 py-3">操作</th>
+                                     </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-gray-100">
+                                     {sprintItems.map(item => (
+                                         <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                                             <td className="px-4 py-3"><input type="checkbox" className="rounded border-gray-300" /></td>
+                                             <td className="px-4 py-3 text-gray-500 text-xs font-mono">{item.id}</td>
+                                             <td className="px-4 py-3">
+                                                 <div className="flex items-center gap-2">
+                                                     {item.type === 'Bug' ? <AlertCircle className="w-4 h-4 text-red-500" /> : <CheckSquare className="w-4 h-4 text-blue-500" />}
+                                                     <span className="text-gray-800 font-medium group-hover:text-blue-600 cursor-pointer">{item.title}</span>
+                                                 </div>
+                                             </td>
+                                             <td className="px-4 py-3">
+                                                 {item.status === 'Done' ? (
+                                                     <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1"><CheckCircle2 className="w-3 h-3" /> 已完成</span>
+                                                 ) : item.status === 'InProgress' ? (
+                                                     <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1"><Clock className="w-3 h-3" /> 进行中</span>
+                                                 ) : (
+                                                     <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs flex items-center w-fit gap-1">待办</span>
+                                                 )}
+                                             </td>
+                                             <td className="px-4 py-3">
+                                                 <span className={`text-xs px-2 py-0.5 rounded border ${
+                                                     item.priority === 'High' ? 'text-red-600 bg-red-50 border-red-100' : 'text-orange-600 bg-orange-50 border-orange-100'
+                                                 }`}>{item.priority === 'High' ? '紧急' : '普通'}</span>
+                                             </td>
+                                             <td className="px-4 py-3">
+                                                 <div className="flex items-center gap-2">
+                                                     <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center">Lo</div>
+                                                     <span className="text-gray-600 text-xs">{item.owner}</span>
+                                                 </div>
+                                             </td>
+                                             <td className="px-4 py-3 text-gray-400">
+                                                 <MoreHorizontal className="w-4 h-4 cursor-pointer hover:text-gray-600" />
+                                             </td>
+                                         </tr>
+                                     ))}
+                                 </tbody>
+                             </table>
+                         </div>
+                     ) : (
+                         <div className="flex h-full gap-4 overflow-x-auto pb-2 border border-gray-200 border-t-0 rounded-b-lg bg-gray-50 p-4">
+                            {/* Columns */}
+                            {['ToDo', 'InProgress', 'Done'].map(status => (
+                                <div key={status} className="flex-1 min-w-[300px] bg-gray-100/70 rounded-lg flex flex-col max-h-full border border-gray-200">
+                                    <div className="p-3 font-semibold text-gray-700 flex justify-between items-center border-b border-gray-200 bg-white rounded-t-lg">
+                                        <span className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${status === 'Done' ? 'bg-green-500' : status === 'InProgress' ? 'bg-blue-500' : 'bg-gray-400'}`}></span>
+                                            {status === 'ToDo' ? '待办' : status === 'InProgress' ? '进行中' : '已完成'}
+                                        </span>
+                                        <span className="bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full text-xs text-gray-600 font-medium shadow-sm">
+                                            {sprintItems.filter(i => i.status === status).length}
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+                                    <div className="p-3 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
+                                        {sprintItems.filter(i => i.status === status).map(item => (
+                                            <div key={item.id} className="bg-white p-3 rounded-md shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-xs text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 group-hover:border-blue-100 group-hover:text-blue-500 transition-colors">{item.id}</span>
+                                                    <MoreHorizontal className="w-4 h-4 text-gray-300 hover:text-gray-600" />
+                                                </div>
+                                                <div className="mb-3 text-sm font-medium text-gray-800 line-clamp-2 leading-snug">
+                                                    {item.type === 'Bug' && <AlertCircle className="w-3.5 h-3.5 text-red-500 inline mr-1.5 -mt-0.5" />}
+                                                    {item.type === 'Feature' && <CheckSquare className="w-3.5 h-3.5 text-blue-500 inline mr-1.5 -mt-0.5" />}
+                                                    {item.type === 'Task' && <CheckSquare className="w-3.5 h-3.5 text-sky-400 inline mr-1.5 -mt-0.5" />}
+                                                    <span className="group-hover:text-blue-600 transition-colors">{item.title}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-5 h-5 bg-amber-500 rounded-full text-white text-[10px] flex items-center justify-center ring-2 ring-white">Lo</div>
+                                                        <span className="text-xs text-gray-500">{item.owner}</span>
+                                                    </div>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                                        item.priority === 'High' ? 'text-red-600 border-red-100 bg-red-50' : 
+                                                        item.priority === 'Medium' ? 'text-orange-600 border-orange-100 bg-orange-50' : 
+                                                        'text-gray-600 border-gray-100 bg-gray-50'
+                                                    }`}>
+                                                        {item.priority === 'High' ? 'High' : item.priority}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                         </div>
+                     )}
                  </div>
              )}
 
@@ -469,7 +634,7 @@ const Iterations: React.FC = () => {
 
   return (
     <>
-      {view === 'list' ? renderList() : renderDetail()}
+      {view === 'list' ? renderList() : view === 'planning' ? renderPlanning() : renderDetail()}
 
       {/* Create Modal */}
       <Modal
