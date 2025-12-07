@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -16,7 +15,7 @@ import Settings from './pages/Settings';
 import { ViewState } from './types';
 
 function App() {
-  const [currentView, setCurrentView] = useState<ViewState>('planning');
+  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
 
   const renderContent = () => {
     switch (currentView) {
@@ -51,7 +50,7 @@ function App() {
         if (['metrics', 'members'].includes(currentView)) {
              return <div className="p-10 text-center text-gray-500">该模块正在开发中...</div>;
         }
-        return <Planning />;
+        return <Dashboard />;
     }
   };
 
