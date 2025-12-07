@@ -3,7 +3,7 @@ import {
   Search, RotateCw, Plus, Edit2, MoreHorizontal, Play, 
   CheckCircle2, XCircle, GitBranch, Settings, ArrowLeft, 
   Clock, AlertCircle, FileText, User, Terminal, ChevronRight,
-  Maximize2, Box, BarChart2
+  Maximize2, Box, BarChart2, Layout, FileCode, Check, HelpCircle
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { PipelineData, Stage, Job, PipelineVariable } from '../types';
@@ -15,6 +15,7 @@ import { VariablesView } from '../components/pipeline/VariablesView';
 import { LogViewer } from '../components/pipeline/LogViewer';
 import { Icons } from '../components/pipeline/Icons';
 
+// ... (Keep existing Mock Execution Data and Interfaces)
 // Mock Execution Data
 interface PipelineExecution {
   id: string;
@@ -104,6 +105,11 @@ const Pipelines: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   
+  // Create Modal State
+  const [templateCategory, setTemplateCategory] = useState('org');
+  const [createMethod, setCreateMethod] = useState<'visual' | 'yaml'>('visual');
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+
   // Editor State (Keep existing for 'editor' view)
   const [pipelineData, setPipelineData] = useState<PipelineData>({
     id: 'pl-demo-01',
@@ -187,6 +193,7 @@ const Pipelines: React.FC = () => {
 
   // --- Render Execution Detail View ---
   const renderExecution = () => (
+      // ... (Keep existing execution view render code)
       <div className="flex flex-col h-full bg-[#f7f8fa]">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
@@ -382,9 +389,7 @@ const Pipelines: React.FC = () => {
       )
   }
 
-  // --- Render Editor --- (Reusing logic but simplified for brevity in this response context)
-  // For the purpose of this request, I focus on list -> execution view. 
-  // The 'editor' view code would remain largely similar to previous version.
+  // --- Render Editor --- (Reusing logic)
   const renderEditor = () => (
       <div className="flex flex-col h-full bg-gray-50">
           <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm z-20">
@@ -513,15 +518,115 @@ const Pipelines: React.FC = () => {
            </table>
        </div>
        
-       {/* Modals... (Keep existing) */}
+       {/* Create Template Modal */}
        <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          title="新建流水线"
-          size="lg"
-          footer={<><button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 border rounded">取消</button><button onClick={() => { setIsCreateModalOpen(false); setView('editor'); }} className="px-4 py-2 bg-pink-700 text-white rounded">创建</button></>}
+          title="选择流水线模板"
+          size="2xl"
+          footer={
+              <>
+                 <button onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50">取消</button>
+                 <button onClick={() => { setIsCreateModalOpen(false); setView('editor'); }} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">创建</button>
+              </>
+          }
        >
-          <div className="p-4 text-center text-gray-500">模板选择占位符</div>
+          <div className="flex h-[500px]">
+              {/* Categories Sidebar */}
+              <div className="w-40 border-r border-gray-200 bg-gray-50 p-2 space-y-1 overflow-y-auto">
+                  {[
+                      { id: 'org', label: '组织模板', icon: Layout },
+                      { id: 'java', label: 'Java', icon: FileCode },
+                      { id: 'php', label: 'PHP', icon: FileCode },
+                      { id: 'node', label: 'Node.js', icon: FileCode },
+                      { id: 'go', label: 'Go', icon: FileCode },
+                      { id: 'python', label: 'Python', icon: FileCode },
+                      { id: 'net', label: '.NET Core', icon: FileCode },
+                      { id: 'cpp', label: 'C++', icon: FileCode },
+                      { id: 'mobile', label: '移动端', icon: Layout },
+                      { id: 'empty', label: '空模板', icon: Layout },
+                      { id: 'other', label: '其他', icon: MoreHorizontal },
+                  ].map(cat => (
+                      <button
+                          key={cat.id}
+                          onClick={() => setTemplateCategory(cat.id)}
+                          className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                              templateCategory === cat.id ? 'bg-white text-blue-600 shadow-sm font-medium' : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                      >
+                          <cat.icon className="w-4 h-4 mr-2" />
+                          {cat.label}
+                      </button>
+                  ))}
+              </div>
+
+              {/* Main Content */}
+              <div className="flex-1 p-6 overflow-y-auto bg-white">
+                  {/* Creation Method */}
+                  <div className="mb-6">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">创建方式 <HelpCircle className="w-3 h-3 text-gray-400" /></h3>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div 
+                              onClick={() => setCreateMethod('visual')}
+                              className={`border-2 rounded-lg p-3 cursor-pointer flex items-center gap-3 transition-all ${
+                                  createMethod === 'visual' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                          >
+                              <div className="bg-blue-100 p-2 rounded text-blue-600"><Layout className="w-5 h-5" /></div>
+                              <div>
+                                  <div className="text-sm font-bold text-gray-900">可视化编排</div>
+                                  <div className="text-xs text-gray-500">图形化界面配置流水线</div>
+                              </div>
+                              {createMethod === 'visual' && <div className="ml-auto bg-blue-500 text-white rounded-full p-0.5"><Check className="w-3 h-3" /></div>}
+                          </div>
+                          <div 
+                              onClick={() => setCreateMethod('yaml')}
+                              className={`border-2 rounded-lg p-3 cursor-pointer flex items-center gap-3 transition-all ${
+                                  createMethod === 'yaml' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                          >
+                              <div className="bg-purple-100 p-2 rounded text-purple-600"><FileCode className="w-5 h-5" /></div>
+                              <div>
+                                  <div className="text-sm font-bold text-gray-900">YAML 化编排</div>
+                                  <div className="text-xs text-gray-500">通过代码文件配置流水线</div>
+                              </div>
+                              {createMethod === 'yaml' && <div className="ml-auto bg-blue-500 text-white rounded-full p-0.5"><Check className="w-3 h-3" /></div>}
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Template List */}
+                  <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">推荐模板</h3>
+                      <div className="space-y-4">
+                          {[1, 2].map((i) => (
+                              <div 
+                                key={i}
+                                onClick={() => setSelectedTemplate(`tpl-${i}`)}
+                                className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                                    selectedTemplate === `tpl-${i}` ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200'
+                                }`}
+                              >
+                                  <div className="flex items-center gap-2 mb-3">
+                                      <div className="bg-white p-1 border rounded shadow-sm"><FileCode className="w-4 h-4 text-blue-600" /></div>
+                                      <span className="text-sm font-bold text-gray-900">Java · 测试、构建</span>
+                                      <span className="bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded">云效预置</span>
+                                  </div>
+                                  
+                                  {/* Visual Flow Preview Mock */}
+                                  <div className="flex items-center gap-2 overflow-hidden">
+                                      <div className="border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 bg-gray-50 whitespace-nowrap">Java 代码扫描</div>
+                                      <div className="h-px w-4 bg-gray-300"></div>
+                                      <div className="border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 bg-gray-50 whitespace-nowrap">Maven 单元测试</div>
+                                      <div className="h-px w-4 bg-gray-300"></div>
+                                      <div className="border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 bg-gray-50 whitespace-nowrap">Java 构建上传</div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          </div>
        </Modal>
     </div>
   ) : view === 'execution' ? renderExecution() : renderEditor();
